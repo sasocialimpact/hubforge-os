@@ -14,24 +14,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Z.ai Code Scaffold - AI-Powered Development",
-  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
-  authors: [{ name: "Z.ai Team" }],
+  title: "HubForge OS — Decision Intelligence Infrastructure",
+  description:
+    "Open-source operating system for building expert reasoning systems. Build, learn, reason, improve.",
+  keywords: ["HubForge OS", "decision intelligence", "reasoning systems", "social impact", "open source"],
+  authors: [{ name: "HubForge OS" }],
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "HubForge OS",
+    description: "Decision Intelligence Infrastructure for Complex Systems",
+    siteName: "HubForge OS",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
+    title: "HubForge OS",
+    description: "Decision Intelligence Infrastructure for Complex Systems",
   },
 };
 
