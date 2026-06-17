@@ -1,6 +1,8 @@
 // Shared types used by the frontend to render the reasoning loop.
 // Mirrors the mini-service event protocol.
 
+import type { ProviderConfig } from './providers'
+
 export type EngineId =
   | 'supervisor'
   | 'retrieval'
@@ -159,6 +161,13 @@ export interface LoopErrorPayload {
 }
 
 // ---- Domain types (mirrors engines.ts) ----
+export interface ClarifyingQuestion {
+  id: string
+  question: string
+  why: string
+  defaultAssumption: string
+}
+
 export interface Decomposition {
   problemStatement: string
   objectives: string[]
@@ -166,6 +175,7 @@ export interface Decomposition {
   stakeholders: { role: string; description: string }[]
   keyConsiderations: string[]
   suggestedFrameworks: string[]
+  clarifyingQuestions?: ClarifyingQuestion[]
 }
 
 export interface RuleCheckResult {
@@ -210,6 +220,51 @@ export interface MemoryRecord {
     evaluation?: EvaluationResult
   }[]
   finalDraft: string
+  answers?: Record<string, string>
+  outputTypes?: OutputType[]
+  provider?: string
+  structuredOutputs?: StructuredOutputs
+}
+
+// ---- Output types & structured deliverables ----
+export type OutputType = 'strategy' | 'toc' | 'logframe' | 'evaluation-plan'
+
+export const OUTPUT_OPTIONS: { id: OutputType; label: string; description: string; icon: string }[] = [
+  { id: 'strategy', label: 'Strategy document', description: 'A written strategy with objectives, activities, risks, and targets.', icon: 'FileText' },
+  { id: 'toc', label: 'Theory of Change diagram', description: 'A visual flowchart: Inputs → Activities → Outputs → Outcomes → Impact.', icon: 'Workflow' },
+  { id: 'logframe', label: 'Logframe table', description: 'A 4×4 logical framework with indicators and means of verification.', icon: 'Table2' },
+  { id: 'evaluation-plan', label: 'Evaluation plan', description: 'Evaluation questions, design, indicators, data collection, and timeline.', icon: 'ClipboardCheck' },
+]
+
+export interface ToCData {
+  targetPopulation: string
+  inputs: string[]
+  activities: string[]
+  outputs: string[]
+  outcomes: string[]
+  impact: string
+  assumptions: string[]
+  externalFactors: string[]
+}
+
+export interface LogframeRow {
+  level: string
+  description: string
+  ovi: string
+  mov: string
+  assumptions: string
+}
+
+export interface LogframeData {
+  goal: LogframeRow
+  purpose: LogframeRow
+  outputs: LogframeRow[]
+  activities: LogframeRow[]
+}
+
+export interface StructuredOutputs {
+  toc?: ToCData
+  logframe?: LogframeData
 }
 
 // ---- A single timeline event the UI renders ----
