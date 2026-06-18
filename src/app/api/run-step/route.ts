@@ -31,7 +31,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ output: ruleEngine(problem, socialImpactPack) })
       }
       case 'reasoning': {
-        const result = await reasoningEngine(config, problem, decomposition, retrieval, priorCritique, priorDraft, socialImpactPack, iteration, maxIterations, outputTypes, answers)
+        const webSearch = body.webSearch // optional web search results
+        const result = await reasoningEngine(config, problem, decomposition, retrieval, priorCritique, priorDraft, socialImpactPack, iteration, maxIterations, outputTypes, answers, webSearch)
         return NextResponse.json({ output: result })
       }
       case 'critique': {

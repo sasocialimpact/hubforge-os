@@ -325,7 +325,8 @@ export async function reasoningEngine(
   iteration: number,
   maxIterations: number,
   outputTypes: OutputType[],
-  answers?: Record<string, string>
+  answers?: Record<string, string>,
+  webSearch?: { demographic: any[]; previousPrograms: any[]; evidence: any[]; summary: string } | null
 ): Promise<string> {
   const frameworksText = (retrieval.frameworks || [])
     .map((f: any) => `### ${f.name}\n${f.description || ''}\nWhen to use: ${f.whenToUse || ''}\nKey elements: ${(f.keyElements || []).join(', ')}${f.template ? `\nTemplate: ${f.template}` : ''}`)
@@ -339,6 +340,25 @@ export async function reasoningEngine(
     : ''
   const outputGuidance = outputTypes.length > 0
     ? `\n## Requested deliverables\nThe user wants: ${outputTypes.map((o) => OUTPUT_LABELS[o].label).join(', ')}. Produce a single unified Markdown strategy document that serves as the source for all requested deliverables. Use clear sections (##) for each logical part. If a Theory of Change is requested, include a section titled "## Theory of Change" with bullet lists for Inputs, Activities, Outputs, Outcomes, Impact, Assumptions, and External Factors. If a Logframe is requested, include a section "## Logframe" with a Markdown table.`
+    : ''
+
+  // Web search context (demographic data, previous programs, evidence from the live web)
+  const webSearchBlock = webSearch && (webSearch.summary || webSearch.demographic?.length || webSearch.previousPrograms?.length || webSearch.evidence?.length)
+    ? `\n## Live Web Research (demographics, previous programs, evidence)
+
+### Research Summary
+${webSearch.summary || 'No summary available.'}
+
+### Demographic Data & Context
+${(webSearch.demographic || []).slice(0, 5).map((r: any, i: number) => `${i + 1}. ${r.title || ''}\n   ${r.snippet || ''}\n   Source: ${r.source || r.url || ''}`).join('\n') || 'No demographic data found.'}
+
+### Previous Programs & Initiatives
+${(webSearch.previousPrograms || []).slice(0, 5).map((r: any, i: number) => `${i + 1}. ${r.title || ''}\n   ${r.snippet || ''}\n   Source: ${r.source || r.url || ''}`).join('\n') || 'No previous programs found.'}
+
+### Evidence & Research
+${(webSearch.evidence || []).slice(0, 5).map((r: any, i: number) => `${i + 1}. ${r.title || ''}\n   ${r.snippet || ''}\n   Source: ${r.source || r.url || ''}`).join('\n') || 'No evidence found.'}
+
+IMPORTANT: Use this live web research to ground your strategy in real demographic data, learn from previous programs in the target region, and cite evidence. Reference specific data points and programs by name.`
     : ''
 
   const system = `You are the REASONING ENGINE of HubForge OS, operating with the ${pack.name}.
@@ -357,6 +377,7 @@ REQUIREMENTS:
   const user = `# PROBLEM
 ${problem}${answersBlock}
 ${outputGuidance}
+${webSearchBlock}
 
 # DECOMPOSITION (from Supervisor Engine)
 - Problem statement: ${decomposition.problemStatement || ''}

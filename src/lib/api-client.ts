@@ -34,6 +34,9 @@ export async function callStructure(finalDraft: string, outputTypes: OutputType[
 export async function callFeedback(currentDraft: string, feedback: string, outputTypes: OutputType[], providerConfig: ProviderConfig): Promise<{ improved: string; addressed: string[]; evaluation: EvaluationResult; structured: StructuredOutputs }> {
   return apiCall('/api/feedback', { currentDraft, feedback, outputTypes, providerConfig })
 }
+export async function callWebSearch(problem: string, decomposition: any, providerConfig: ProviderConfig): Promise<{ demographic: any[]; previousPrograms: any[]; evidence: any[]; summary: string }> {
+  return apiCall('/api/search', { problem, decomposition, providerConfig })
+}
 export async function getMemory(): Promise<any[]> { const res = await fetch('/api/memory'); const data = await res.json(); return data.memory ?? [] }
 export async function clearMemory(): Promise<void> { await fetch('/api/memory', { method: 'DELETE' }) }
 export async function saveMemory(record: any): Promise<void> { await apiCall('/api/memory', { record }) }

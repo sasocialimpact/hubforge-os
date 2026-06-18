@@ -1,23 +1,26 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
-import { Socket } from 'socket.io-client'
+import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles, ArrowRight, ArrowLeft, Loader2, FileText, Workflow, Table2, ClipboardCheck,
-  Settings, RefreshCw, Check, MessageSquare, Send, Lightbulb, Wand2, Download, Copy, CheckCircle2,
+  Settings, RefreshCw, Check, MessageSquare, Send, Lightbulb, Wand2, Copy, CheckCircle2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { SettingsDialog } from './settings-dialog'
 import { TheoryOfChangeDiagram, LogframeTable } from './deliverables'
-import { OUTPUT_OPTIONS, type OutputType, type ClarifyingQuestion, type MemoryRecord, type StructuredOutputs, type EvaluationResult } from '@/lib/types'
-import { getStoredProviderConfig, providerDisplayLabel, type ProviderConfig } from '@/lib/providers'
+import { OUTPUT_OPTIONS, type OutputType, type ClarifyingQuestion, type StructuredOutputs, type EvaluationResult, type Decomposition } from '@/lib/types'
+import { providerDisplayLabel, type ProviderConfig } from '@/lib/providers'
+import {
+  callInterview, callRetrieval, callRuleChecks, callReasoning, callCritique,
+  callImprovement, callEvaluation, callStructure, callFeedback, callWebSearch,
+  getMemory, clearMemory, saveMemory,
+} from '@/lib/api-client'
+import { analytics, setAnalyticsSession } from '@/lib/analytics'
 import { socialImpactPackMeta, EXAMPLE_PROBLEMS } from '@/lib/social-impact-pack'
 import { cn } from '@/lib/utils'
 
@@ -30,206 +33,206 @@ interface Deliverable {
   outputTypes: OutputType[]
 }
 
-export function GeneralMode({ socket, connected }: { socket: Socket | null; connected: boolean }) {
+const MAX_ITERATIONS = 2
+const QUALITY_THRESHOLD = 80
+
+export function GeneralMode({ connected, providerConfig }: { connected: boolean; providerConfig: ProviderConfig }) {
   const [phase, setPhase] = useState<Phase>('input')
   const [problem, setProblem] = useState('')
   const [outputTypes, setSelectedOutputs] = useState<OutputType[]>(['strategy', 'toc'])
-  const [providerConfig, setProviderConfig] = useState<ProviderConfig>(() => getStoredProviderConfig())
   const [settingsOpen, setSettingsOpen] = useState(false)
 
-  // Interview
   const [questions, setQuestions] = useState<ClarifyingQuestion[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [skipped, setSkipped] = useState<Record<string, boolean>>({})
+  const [decomposition, setDecomposition] = useState<Decomposition | null>(null)
 
-  // Building
   const [progressMsg, setProgressMsg] = useState('Starting…')
   const [progressPhase, setProgressPhase] = useState('')
 
-  // Deliverable
   const [deliverable, setDeliverable] = useState<Deliverable | null>(null)
   const [feedbackText, setFeedbackText] = useState('')
   const [feedbackWorking, setFeedbackWorking] = useState(false)
   const [feedbackHistory, setFeedbackHistory] = useState<{ feedback: string; addressed: string[] }[]>([])
 
-  // Memory
-  const [memory, setMemory] = useState<MemoryRecord[]>([])
+  const [memory, setMemory] = useState<any[]>([])
 
-  const sessionIdRef = useRef('')
-  const startRunRef = useRef<(answerMap?: Record<string, string>, skip?: boolean) => void>(() => {})
-  const feedbackTextRef = useRef('')
+  const runLoop = useCallback(async (problemText: string, answerMap: Record<string, string>, outs: OutputType[], config: ProviderConfig) => {
+    const loopSessionId = `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    setAnalyticsSession(loopSessionId)
+    const loopStart = Date.now()
+    analytics.runStart({ problemLength: problemText.length, outputTypes: outs, provider: config.provider, skippedInterview: Object.keys(answerMap).length === 0 })
 
-  // Socket listeners for General mode
-  useEffect(() => {
-    if (!socket) return
-
-    const onInterviewQuestions = (p: any) => {
-      if (p.sessionId !== sessionIdRef.current) return
-      setQuestions(p.questions || [])
-      if ((p.questions || []).length > 0) {
-        setPhase('interview')
-      } else {
-        // No questions — go straight to building
-        startRunRef.current({}, true)
-      }
-    }
-    const onProgress = (p: any) => {
-      if (p.sessionId !== sessionIdRef.current) return
-      setProgressMsg(p.message)
-      setProgressPhase(p.phase || '')
-    }
-    const onLoopComplete = (p: any) => {
-      if (p.sessionId !== sessionIdRef.current) return
-      const r = p.record
-      setDeliverable({
-        draft: r.finalDraft,
-        evaluation: r.trace[r.trace.length - 1]?.evaluation ?? null,
-        structured: r.structuredOutputs ?? null,
-        outputTypes: r.outputTypes ?? ['strategy'],
-      })
-      setPhase('deliverable')
-    }
-    const onLoopError = (p: any) => {
-      if (p.sessionId !== sessionIdRef.current) return
-      setProgressMsg(`Error: ${p.error}`)
-      setPhase('input')
-    }
-    const onFeedbackDone = (p: any) => {
-      if (p.sessionId !== sessionIdRef.current) return
-      setFeedbackWorking(false)
-      setDeliverable((prev) => prev ? { ...prev, draft: p.improved, evaluation: p.evaluation, structured: p.structured } : null)
-      setFeedbackHistory((h) => [...h, { feedback: feedbackTextRef.current, addressed: p.addressed || [] }])
-      setFeedbackText('')
-    }
-    const onFeedbackError = (p: any) => {
-      if (p.sessionId !== sessionIdRef.current) return
-      setFeedbackWorking(false)
-    }
-    const onMemoryList = (data: { memory: MemoryRecord[] }) => setMemory(data.memory ?? [])
-
-    socket.on('interview:questions', onInterviewQuestions)
-    socket.on('progress', onProgress)
-    socket.on('loop:complete', onLoopComplete)
-    socket.on('loop:error', onLoopError)
-    socket.on('feedback:done', onFeedbackDone)
-    socket.on('feedback:error', onFeedbackError)
-    socket.on('memory:list', onMemoryList)
-
-    return () => {
-      socket.off('interview:questions', onInterviewQuestions)
-      socket.off('progress', onProgress)
-      socket.off('loop:complete', onLoopComplete)
-      socket.off('loop:error', onLoopError)
-      socket.off('feedback:done', onFeedbackDone)
-      socket.off('feedback:error', onFeedbackError)
-      socket.off('memory:list', onMemoryList)
-    }
-  }, [socket])
-
-  // ---------- Actions ----------
-  const startInterview = useCallback(() => {
-    if (!socket || !connected || !problem.trim()) return
-    const sessionId = `g-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    sessionIdRef.current = sessionId
-    setQuestions([])
-    setAnswers({})
-    setSkipped({})
-    setDeliverable(null)
-    setFeedbackHistory([])
     setProgressMsg('Understanding your project…')
     setProgressPhase('supervisor')
     setPhase('building')
-    socket.emit('interview', { problem: problem.trim(), sessionId, providerConfig })
-  }, [socket, connected, problem, providerConfig])
 
-  const startRun = useCallback((answerMap?: Record<string, string>, skipInterview = false) => {
-    if (!socket) return
-    const sessionId = sessionIdRef.current || `g-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    sessionIdRef.current = sessionId
-    const finalAnswers = answerMap ?? {}
-    setProgressMsg('Gathering relevant frameworks and evidence…')
-    setProgressPhase('retrieval')
+    try {
+      let decomp = decomposition
+      if (!decomp) {
+        const interviewResult = await callInterview(problemText, config)
+        decomp = interviewResult.decomposition
+        setDecomposition(decomp)
+      }
+
+      // Retrieval
+      setProgressMsg('Gathering relevant frameworks and evidence…')
+      setProgressPhase('retrieval')
+      const retrievalResult = await callRetrieval(problemText, decomp!)
+      const retrieval = retrievalResult.output
+
+      // Web Search — NEW: search for demographic data, previous programs, evidence
+      setProgressMsg('Researching demographics, previous programs, and evidence…')
+      setProgressPhase('search')
+      let webSearch: any = null
+      try {
+        webSearch = await callWebSearch(problemText, decomp!, config)
+      } catch (e) { console.warn('Web search failed:', e) }
+
+      let priorDraft: string | null = null
+      let priorCritiqueText: string | null = null
+      let finalDraft = ''
+      let finalScore = 0
+      let thresholdMet = false
+      let iterations = 0
+
+      for (let iter = 1; iter <= MAX_ITERATIONS; iter++) {
+        iterations = iter
+        setProgressMsg('Checking the basics…')
+        setProgressPhase('rule')
+
+        setProgressMsg(`Drafting your strategy (iteration ${iter})…`)
+        setProgressPhase('reasoning')
+        const draft = await callReasoning({
+          problem: problemText, decomposition: decomp!, retrieval,
+          priorCritique: priorCritiqueText, priorDraft,
+          iteration: iter, maxIterations: MAX_ITERATIONS,
+          outputTypes: outs, answers: answerMap, providerConfig: config,
+        })
+
+        setProgressMsg('Reviewing the logic…')
+        setProgressPhase('critique')
+        const critique = await callCritique(draft, config)
+        priorCritiqueText = critique.issues.map((i: any) => `[${i.severity}] (${i.heuristic}) ${i.description}`).join('\n')
+
+        setProgressMsg('Refining the draft…')
+        setProgressPhase('improvement')
+        const improved = await callImprovement(draft, critique, config)
+
+        setProgressMsg('Scoring quality…')
+        setProgressPhase('evaluation')
+        const evaluation = await callEvaluation(improved, config, QUALITY_THRESHOLD)
+
+        finalDraft = improved
+        finalScore = evaluation.overall
+        thresholdMet = evaluation.thresholdMet
+        priorDraft = improved
+
+        if (evaluation.thresholdMet) break
+      }
+
+      let structured: StructuredOutputs = {}
+      if (outs.includes('toc') || outs.includes('logframe')) {
+        setProgressMsg('Building your diagrams…')
+        setProgressPhase('structure')
+        structured = await callStructure(finalDraft, outs, config)
+      }
+
+      const evaluation = await callEvaluation(finalDraft, config, QUALITY_THRESHOLD)
+
+      setDeliverable({ draft: finalDraft, evaluation, structured, outputTypes: outs })
+      setPhase('deliverable')
+
+      analytics.runComplete({ finalScore, iterations, thresholdMet }, Date.now() - loopStart)
+      analytics.outputViewed({ tab: 'strategy', hasToc: !!structured.toc, hasLogframe: !!structured.logframe })
+
+      saveMemory({
+        id: `s-${Date.now()}`, timestamp: new Date().toISOString(),
+        problem: problemText, iterations, finalScore, thresholdMet,
+        finalDraft, structuredOutputs: structured, provider: providerDisplayLabel(config),
+      }).catch(() => {})
+      getMemory().then(setMemory).catch(() => {})
+    } catch (e: any) {
+      console.error('Loop error:', e)
+      analytics.runError({ error: e?.message ?? 'unknown', phase: progressPhase || 'unknown' })
+      setProgressMsg(`Error: ${e?.message ?? 'Something went wrong'}`)
+      setPhase('input')
+    }
+  }, [decomposition, progressPhase])
+
+  const startInterview = useCallback(async () => {
+    if (!problem.trim()) return
+    setProgressMsg('Understanding your project…')
+    setProgressPhase('supervisor')
     setPhase('building')
-    socket.emit('run', {
-      problem: problem.trim(),
-      sessionId,
-      answers: finalAnswers,
-      outputTypes,
-      providerConfig,
-      skipInterview,
-    })
-  }, [socket, outputTypes, problem, providerConfig])
+    analytics.onboardingStart()
 
-  // Keep ref in sync so socket callbacks can call the latest startRun
-  useEffect(() => { startRunRef.current = startRun }, [startRun])
-
-  const updateFeedbackText = useCallback((s: string) => {
-    feedbackTextRef.current = s
-    setFeedbackText(s)
-  }, [])
+    try {
+      const result = await callInterview(problem.trim(), providerConfig)
+      setDecomposition(result.decomposition)
+      setQuestions(result.questions || [])
+      setAnswers({})
+      setSkipped({})
+      setDeliverable(null)
+      setFeedbackHistory([])
+      if ((result.questions || []).length > 0) {
+        setPhase('interview')
+      } else {
+        await runLoop(problem.trim(), {}, outputTypes, providerConfig)
+      }
+    } catch (e: any) {
+      setProgressMsg(`Error: ${e?.message}`)
+      setPhase('input')
+    }
+  }, [problem, providerConfig, outputTypes, runLoop])
 
   const handleContinueFromInterview = () => {
-    // Build answer map: use answer text, or the default assumption if skipped
     const answerMap: Record<string, string> = {}
     for (const q of questions) {
-      if (skipped[q.id]) {
-        answerMap[q.id] = `[Assumption used] ${q.defaultAssumption}`
-      } else if (answers[q.id]?.trim()) {
-        answerMap[q.id] = answers[q.id].trim()
-      } else {
-        answerMap[q.id] = `[Assumption used] ${q.defaultAssumption}`
-      }
+      if (skipped[q.id]) answerMap[q.id] = `[Assumption used] ${q.defaultAssumption}`
+      else if (answers[q.id]?.trim()) answerMap[q.id] = answers[q.id].trim()
+      else answerMap[q.id] = `[Assumption used] ${q.defaultAssumption}`
     }
-    startRun(answerMap, true)
+    runLoop(problem.trim(), answerMap, outputTypes, providerConfig)
   }
 
-  const handleFeedback = () => {
-    if (!socket || !feedbackText.trim() || !deliverable) return
+  const handleFeedback = async () => {
+    if (!feedbackText.trim() || !deliverable) return
     setFeedbackWorking(true)
-    socket.emit('feedback', {
-      sessionId: sessionIdRef.current,
-      feedback: feedbackText.trim(),
-      currentDraft: deliverable.draft,
-      outputTypes: deliverable.outputTypes,
-      providerConfig,
-    })
+    analytics.feedbackGiven({ feedbackLength: feedbackText.trim().length })
+    try {
+      const result = await callFeedback(deliverable.draft, feedbackText.trim(), deliverable.outputTypes, providerConfig)
+      setDeliverable({ draft: result.improved, evaluation: result.evaluation, structured: result.structured, outputTypes: deliverable.outputTypes })
+      setFeedbackHistory((h) => [...h, { feedback: feedbackText, addressed: result.addressed || [] }])
+      analytics.feedbackComplete({ newScore: result.evaluation?.overall ?? 0, addressedCount: result.addressed?.length ?? 0 })
+      setFeedbackText('')
+    } catch (e: any) {
+      console.error('Feedback error:', e)
+      analytics.runError({ error: e?.message ?? 'feedback failed', phase: 'feedback' })
+    }
+    setFeedbackWorking(false)
   }
 
   const handleReset = () => {
-    setPhase('input')
-    setProblem('')
-    setQuestions([])
-    setAnswers({})
-    setSkipped({})
-    setDeliverable(null)
-    setFeedbackText('')
-    setFeedbackHistory([])
+    setPhase('input'); setProblem(''); setQuestions([]); setAnswers({})
+    setSkipped({}); setDecomposition(null); setDeliverable(null)
+    setFeedbackText(''); setFeedbackHistory([])
   }
 
   const toggleOutput = (id: OutputType) => {
     setSelectedOutputs((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
   }
 
-  const copyDraft = () => {
-    if (deliverable?.draft) navigator.clipboard?.writeText(deliverable.draft)
-  }
-
-  // ---------- Render ----------
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-5">
-      {/* Top bar: provider + settings */}
       <div className="flex items-center justify-between gap-2">
         <Badge variant="outline" className="gap-1.5 font-mono text-[10px] py-1">
           <Sparkles className="h-3 w-3 text-amber-600" />
           {providerDisplayLabel(providerConfig)}
         </Badge>
-        <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setSettingsOpen(true)}>
-          <Settings className="h-3.5 w-3.5" /> AI settings
-        </Button>
       </div>
 
       <AnimatePresence mode="wait">
-        {/* =================== PHASE: INPUT =================== */}
         {phase === 'input' && (
           <motion.div key="input" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="space-y-5">
             <Card className="p-6 sm:p-8 shadow-sm">
@@ -242,15 +245,12 @@ export function GeneralMode({ socket, connected }: { socket: Socket | null; conn
                   <p className="text-sm text-muted-foreground mt-0.5">Describe your project, paste a draft proposal, or share an idea. We'll handle the M&E expertise.</p>
                 </div>
               </div>
-
               <Textarea
                 value={problem}
                 onChange={(e) => setProblem(e.target.value)}
                 placeholder="e.g. We want to improve school attendance for 2,000 children in rural Kenya. We have $50k and 18 months. Help us design the program and a theory of change."
                 className="min-h-[130px] resize-y text-sm leading-relaxed"
               />
-
-              {/* Example chips */}
               <div className="mt-3 flex flex-wrap gap-1.5">
                 <span className="text-[10px] font-mono text-muted-foreground self-center">try:</span>
                 {EXAMPLE_PROBLEMS.map((ex) => (
@@ -262,7 +262,6 @@ export function GeneralMode({ socket, connected }: { socket: Socket | null; conn
               </div>
             </Card>
 
-            {/* Output selection */}
             <Card className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <FileText className="h-4 w-4 text-amber-600" />
@@ -295,15 +294,14 @@ export function GeneralMode({ socket, connected }: { socket: Socket | null; conn
 
             <Button
               onClick={startInterview}
-              disabled={!connected || !problem.trim() || outputTypes.length === 0}
+              disabled={!problem.trim() || outputTypes.length === 0}
               className="w-full h-12 text-base gap-2 bg-amber-600 hover:bg-amber-700 text-white"
             >
-              {connected ? <><Sparkles className="h-5 w-5" /> Help me build it</> : <><Loader2 className="h-5 w-5 animate-spin" /> Connecting…</>}
+              <Sparkles className="h-5 w-5" /> Help me build it
             </Button>
           </motion.div>
         )}
 
-        {/* =================== PHASE: INTERVIEW =================== */}
         {phase === 'interview' && (
           <motion.div key="interview" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="space-y-4">
             <Card className="p-5">
@@ -312,7 +310,6 @@ export function GeneralMode({ socket, connected }: { socket: Socket | null; conn
                 <h3 className="text-sm font-bold">A few quick questions</h3>
               </div>
               <p className="text-xs text-muted-foreground mb-4">These help us tailor the output. Skip any you're unsure about — we'll use a sensible assumption based on public evidence.</p>
-
               <div className="space-y-4">
                 {questions.map((q, i) => (
                   <div key={q.id} className="rounded-lg border border-border p-3">
@@ -346,7 +343,6 @@ export function GeneralMode({ socket, connected }: { socket: Socket | null; conn
                 ))}
               </div>
             </Card>
-
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setPhase('input')} className="gap-1.5">
                 <ArrowLeft className="h-4 w-4" /> Back
@@ -358,31 +354,39 @@ export function GeneralMode({ socket, connected }: { socket: Socket | null; conn
           </motion.div>
         )}
 
-        {/* =================== PHASE: BUILDING =================== */}
         {phase === 'building' && (
           <motion.div key="building" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-20">
-            <BuildingProgress message={progressMsg} phase={progressPhase} />
+            <div className="flex flex-col items-center gap-5">
+              <div className="relative h-20 w-20">
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                  className="absolute inset-0 rounded-full border-4 border-amber-200 border-t-amber-600" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Sparkles className="h-7 w-7 text-amber-600" />
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-medium">{progressMsg}</p>
+                <p className="text-[10px] text-muted-foreground font-mono mt-1">{progressPhase || 'starting'}</p>
+              </div>
+            </div>
           </motion.div>
         )}
 
-        {/* =================== PHASE: DELIVERABLE =================== */}
         {phase === 'deliverable' && deliverable && (
           <motion.div key="deliverable" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="space-y-4">
             <DeliverableView
               deliverable={deliverable}
               feedbackText={feedbackText}
-              setFeedbackText={updateFeedbackText}
+              setFeedbackText={setFeedbackText}
               onFeedback={handleFeedback}
               feedbackWorking={feedbackWorking}
               feedbackHistory={feedbackHistory}
-              onCopy={copyDraft}
               onReset={handleReset}
             />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Memory (collapsed, shown in deliverable phase) */}
       {phase === 'deliverable' && memory.length > 0 && (
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -391,9 +395,9 @@ export function GeneralMode({ socket, connected }: { socket: Socket | null; conn
           </div>
           <ScrollArea className="h-24">
             <div className="space-y-1">
-              {memory.slice(0, 5).map((m) => (
+              {memory.slice(0, 5).map((m: any) => (
                 <div key={m.id} className="flex items-baseline gap-2 text-[11px]">
-                  <span className={cn('font-mono font-bold', m.finalScore >= 80 ? 'text-emerald-600' : 'text-amber-600')}>{m.finalScore}</span>
+                  <span className={cn('font-mono font-bold', (m.final_score ?? m.finalScore) >= 80 ? 'text-emerald-600' : 'text-amber-600')}>{m.final_score ?? m.finalScore}</span>
                   <span className="truncate text-muted-foreground">{m.problem}</span>
                 </div>
               ))}
@@ -401,41 +405,13 @@ export function GeneralMode({ socket, connected }: { socket: Socket | null; conn
           </ScrollArea>
         </Card>
       )}
-
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} onSaved={setProviderConfig} />
     </div>
   )
 }
 
-// ============================================================
-// Building progress — single clean animated indicator
-// ============================================================
-function BuildingProgress({ message, phase }: { message: string; phase: string }) {
-  return (
-    <div className="flex flex-col items-center gap-5">
-      <div className="relative h-20 w-20">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-          className="absolute inset-0 rounded-full border-4 border-amber-200 border-t-amber-600"
-        />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Sparkles className="h-7 w-7 text-amber-600" />
-        </div>
-      </div>
-      <div className="text-center">
-        <p className="text-sm font-medium">{message}</p>
-        <p className="text-[10px] text-muted-foreground font-mono mt-1">{phase || 'starting'}</p>
-      </div>
-    </div>
-  )
-}
-
-// ============================================================
-// Deliverable view — the output with feedback bar
-// ============================================================
+// Deliverable view + markdown renderer (same as before)
 function DeliverableView({
-  deliverable, feedbackText, setFeedbackText: updateFeedbackText, onFeedback, feedbackWorking, feedbackHistory, onCopy, onReset,
+  deliverable, feedbackText, setFeedbackText, onFeedback, feedbackWorking, feedbackHistory, onReset,
 }: {
   deliverable: Deliverable
   feedbackText: string
@@ -443,7 +419,6 @@ function DeliverableView({
   onFeedback: () => void
   feedbackWorking: boolean
   feedbackHistory: { feedback: string; addressed: string[] }[]
-  onCopy: () => void
   onReset: () => void
 }) {
   const { draft, evaluation, structured, outputTypes } = deliverable
@@ -460,11 +435,10 @@ function DeliverableView({
     { id: 'logframe', label: 'Logframe', icon: Table2, show: !!hasLogframe },
   ].filter((t) => t.show)
 
-  const handleCopy = () => { onCopy(); setCopied(true); setTimeout(() => setCopied(false), 1500) }
+  const handleCopy = () => { navigator.clipboard?.writeText(draft); setCopied(true); setTimeout(() => setCopied(false), 1500) }
 
   return (
     <div className="space-y-4">
-      {/* Status banner */}
       <Card className={cn('p-4', ready ? 'border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20' : 'border-amber-500/40 bg-amber-50/50 dark:bg-amber-950/20')}>
         <div className="flex items-center gap-3">
           <div className={cn('h-10 w-10 rounded-full flex items-center justify-center', ready ? 'bg-emerald-500' : 'bg-amber-500')}>
@@ -472,9 +446,7 @@ function DeliverableView({
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-bold">{ready ? 'Ready to share' : 'Good draft — a few tweaks could help'}</h3>
-            <p className="text-xs text-muted-foreground">
-              Quality score {score}/100 {ready ? '· meets our quality threshold' : '· below the 80 threshold but still usable'}
-            </p>
+            <p className="text-xs text-muted-foreground">Quality score {score}/100 {ready ? '· meets our quality threshold' : '· below the 80 threshold but still usable'}</p>
           </div>
           <div className="flex gap-1.5">
             <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={handleCopy}>
@@ -487,7 +459,6 @@ function DeliverableView({
         </div>
       </Card>
 
-      {/* Deliverable tabs */}
       {tabs.length > 0 && (
         <Tabs defaultValue={tabs[0].id}>
           <TabsList className="w-full justify-start flex-wrap h-auto">
@@ -497,7 +468,6 @@ function DeliverableView({
               </TabsTrigger>
             ))}
           </TabsList>
-
           <TabsContent value="strategy" className="mt-3">
             <Card className="p-5">
               <ScrollArea className="h-[520px]">
@@ -505,7 +475,6 @@ function DeliverableView({
               </ScrollArea>
             </Card>
           </TabsContent>
-
           <TabsContent value="toc" className="mt-3">
             <Card className="p-5">
               {hasToc && structured?.toc ? <TheoryOfChangeDiagram data={structured.toc} /> : (
@@ -513,7 +482,6 @@ function DeliverableView({
               )}
             </Card>
           </TabsContent>
-
           <TabsContent value="logframe" className="mt-3">
             {hasLogframe && structured?.logframe ? <LogframeTable data={structured.logframe} /> : (
               <Card className="p-5"><p className="text-xs text-muted-foreground text-center py-8">Logframe not available.</p></Card>
@@ -522,7 +490,6 @@ function DeliverableView({
         </Tabs>
       )}
 
-      {/* Feedback bar */}
       <Card className="p-4 border-amber-500/30">
         <div className="flex items-center gap-2 mb-2">
           <MessageSquare className="h-4 w-4 text-amber-600" />
@@ -532,7 +499,7 @@ function DeliverableView({
         <div className="flex gap-2">
           <Textarea
             value={feedbackText}
-            onChange={(e) => updateFeedbackText(e.target.value)}
+            onChange={(e) => setFeedbackText(e.target.value)}
             placeholder="e.g. Make the assumptions about market access more explicit. Add a risk row on input price volatility."
             className="min-h-[56px] text-sm resize-none"
             disabled={feedbackWorking}
@@ -543,8 +510,6 @@ function DeliverableView({
             <span className="hidden sm:inline">{feedbackWorking ? 'Revising…' : 'Improve'}</span>
           </Button>
         </div>
-
-        {/* Feedback history */}
         {feedbackHistory.length > 0 && (
           <div className="mt-3 pt-3 border-t border-border space-y-2">
             {feedbackHistory.map((fh, i) => (
@@ -571,9 +536,6 @@ function DeliverableView({
   )
 }
 
-// ============================================================
-// Lightweight markdown renderer
-// ============================================================
 function MarkdownRender({ text }: { text: string }) {
   const lines = text.split('\n')
   const blocks: React.ReactNode[] = []
@@ -597,9 +559,7 @@ function MarkdownRender({ text }: { text: string }) {
       i--
       blocks.push(<ol key={key++} className="list-decimal pl-5 space-y-1 my-2">{items.map((it, j) => <li key={j} className="text-sm leading-relaxed">{inlineMd(it)}</li>)}</ol>)
     } else if (line.trim() === '') {
-      // skip
     } else if (line.startsWith('|')) {
-      // markdown table
       const tableLines: string[] = []
       while (i < lines.length && lines[i].startsWith('|')) { tableLines.push(lines[i]); i++ }
       i--
@@ -628,7 +588,6 @@ function parseMdTable(lines: string[]): { headers: string[]; rows: string[][] } 
   if (lines.length < 2) return null
   const split = (l: string) => l.replace(/^\||\|$/g, '').split('|').map((s) => s.trim())
   const headers = split(lines[0])
-  // skip separator line
   const rows = lines.slice(2).map(split)
   return { headers, rows }
 }
