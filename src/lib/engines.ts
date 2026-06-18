@@ -11,7 +11,7 @@ import type { DomainPack } from './knowledge.ts'
 //           Google Gemini | Groq | Local (Ollama / LM Studio / any OpenAI-compat server)
 // ============================================================
 
-export type ProviderId = 'zai' | 'openai' | 'anthropic' | 'gemini' | 'groq' | 'local'
+export type ProviderId = 'zai' | 'zai-key' | 'openai' | 'anthropic' | 'gemini' | 'groq' | 'local'
 
 export interface ProviderConfig {
   provider: ProviderId
@@ -21,6 +21,7 @@ export interface ProviderConfig {
 }
 
 const DEFAULT_BASE_URLS: Record<Exclude<ProviderId, 'zai'>, string> = {
+  'zai-key': 'https://api.z.ai/api/paas/v4',
   openai: 'https://api.openai.com/v1',
   anthropic: 'https://api.anthropic.com/v1',
   gemini: 'https://generativelanguage.googleapis.com/v1beta/openai',
@@ -29,6 +30,7 @@ const DEFAULT_BASE_URLS: Record<Exclude<ProviderId, 'zai'>, string> = {
 }
 
 const DEFAULT_MODELS: Record<Exclude<ProviderId, 'zai'>, string> = {
+  'zai-key': 'glm-4.6',
   openai: 'gpt-4o-mini',
   anthropic: 'claude-3-5-sonnet-20241022',
   gemini: 'gemini-1.5-flash',
@@ -37,7 +39,8 @@ const DEFAULT_MODELS: Record<Exclude<ProviderId, 'zai'>, string> = {
 }
 
 const PROVIDER_LABELS: Record<ProviderId, string> = {
-  zai: 'Z.ai (built-in)',
+  zai: 'Z.ai (shared, free)',
+  'zai-key': 'Z.ai (your own key)',
   openai: 'OpenAI',
   anthropic: 'Anthropic (Claude)',
   gemini: 'Google Gemini',
@@ -60,7 +63,8 @@ export function normalizeConfig(config?: ProviderConfig): ProviderConfig {
 
 export function describeProvider(config?: ProviderConfig): string {
   const c = normalizeConfig(config)
-  if (c.provider === 'zai') return 'Z.ai built-in'
+  if (c.provider === 'zai') return 'Z.ai (shared, free)'
+  if (c.provider === 'zai-key') return `Z.ai (own key) · ${c.model}`
   return `${PROVIDER_LABELS[c.provider]} · ${c.model} @ ${c.baseUrl}`
 }
 

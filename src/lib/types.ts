@@ -3,6 +3,8 @@
 
 import type { ProviderConfig } from './providers'
 
+export type { ProviderConfig }
+
 export type EngineId =
   | 'supervisor'
   | 'retrieval'

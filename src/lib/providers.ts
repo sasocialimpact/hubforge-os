@@ -1,7 +1,7 @@
 // AI Provider configuration. Persisted to localStorage.
-// The user can choose Z.ai (built-in, no key) or bring their own provider.
+// Users can use the shared built-in Z.ai (free, limited) or bring their own API key.
 
-export type ProviderId = 'zai' | 'openai' | 'anthropic' | 'gemini' | 'groq' | 'local'
+export type ProviderId = 'zai' | 'zai-key' | 'openai' | 'anthropic' | 'gemini' | 'groq' | 'local'
 
 export interface ProviderConfig {
   provider: ProviderId
@@ -19,23 +19,51 @@ export interface ProviderMeta {
   defaultBaseUrl: string
   modelHint: string
   docsUrl: string
+  badge?: string
+  badgeColor?: string
 }
 
 export const PROVIDERS: ProviderMeta[] = [
   {
     id: 'zai',
-    label: 'Z.ai (built-in)',
-    description: 'No setup required. Uses the built-in Z.ai model. Best for getting started.',
+    label: 'Z.ai (shared, free)',
+    description: 'No setup needed. Uses a shared Z.ai account. Best for trying it out — may have usage limits.',
     needsKey: false,
     defaultModel: '',
     defaultBaseUrl: '',
     modelHint: 'auto',
     docsUrl: '',
+    badge: 'GETTING STARTED',
+    badgeColor: 'emerald',
+  },
+  {
+    id: 'zai-key',
+    label: 'Z.ai (your own key)',
+    description: 'Get your own free Z.ai API key for unlimited use. Recommended for regular users.',
+    needsKey: true,
+    defaultModel: 'glm-4.6',
+    defaultBaseUrl: 'https://api.z.ai/api/paas/v4',
+    modelHint: 'glm-4.6, glm-4-plus, glm-4-air',
+    docsUrl: 'https://z.ai/manage/apikey',
+    badge: 'RECOMMENDED',
+    badgeColor: 'amber',
+  },
+  {
+    id: 'groq',
+    label: 'Groq (free tier)',
+    description: 'Llama 3.3, Gemma — very fast. Generous free tier. Get a key in 30 seconds.',
+    needsKey: true,
+    defaultModel: 'llama-3.3-70b-versatile',
+    defaultBaseUrl: 'https://api.groq.com/openai/v1',
+    modelHint: 'llama-3.3-70b-versatile, gemma2-9b-it',
+    docsUrl: 'https://console.groq.com/keys',
+    badge: 'FREE TIER',
+    badgeColor: 'emerald',
   },
   {
     id: 'openai',
     label: 'OpenAI',
-    description: 'GPT-4o, GPT-4o-mini, etc. Bring your own API key.',
+    description: 'GPT-4o, GPT-4o-mini, etc. Bring your own API key. Pay per use.',
     needsKey: true,
     defaultModel: 'gpt-4o-mini',
     defaultBaseUrl: 'https://api.openai.com/v1',
@@ -55,7 +83,7 @@ export const PROVIDERS: ProviderMeta[] = [
   {
     id: 'gemini',
     label: 'Google Gemini',
-    description: 'Gemini 1.5 / 2.0 Flash & Pro. Uses Google OpenAI-compatible endpoint.',
+    description: 'Gemini 1.5 / 2.0 Flash and Pro. Free tier available.',
     needsKey: true,
     defaultModel: 'gemini-1.5-flash',
     defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
@@ -63,24 +91,16 @@ export const PROVIDERS: ProviderMeta[] = [
     docsUrl: 'https://aistudio.google.com/app/apikey',
   },
   {
-    id: 'groq',
-    label: 'Groq (fast inference)',
-    description: 'Llama 3.3, Mixtral, Gemma — very fast. Free tier available.',
-    needsKey: true,
-    defaultModel: 'llama-3.3-70b-versatile',
-    defaultBaseUrl: 'https://api.groq.com/openai/v1',
-    modelHint: 'llama-3.3-70b-versatile, gemma2-9b-it',
-    docsUrl: 'https://console.groq.com/keys',
-  },
-  {
     id: 'local',
-    label: 'Local model (Ollama / LM Studio)',
-    description: 'Run Gemma, GLM, Llama, etc. on your own computer. No data leaves your machine. Requires a local OpenAI-compatible server.',
+    label: 'Local model (Ollama)',
+    description: 'Run Gemma, GLM, Llama on your own computer. Free forever, fully private. No data leaves your machine.',
     needsKey: false,
     defaultModel: 'gemma2:9b',
     defaultBaseUrl: 'http://localhost:11434/v1',
     modelHint: 'gemma2:9b, glm4:9b, llama3.1:8b, qwen2.5:7b',
     docsUrl: 'https://ollama.com/download',
+    badge: 'FREE FOREVER',
+    badgeColor: 'emerald',
   },
 ]
 
@@ -108,7 +128,9 @@ export function storeProviderConfig(config: ProviderConfig): void {
 export function providerDisplayLabel(config: ProviderConfig): string {
   const meta = PROVIDERS.find((p) => p.id === config.provider)
   if (!meta) return config.provider
-  if (config.provider === 'zai') return 'Z.ai (built-in)'
+  if (config.provider === 'zai') return 'Z.ai (shared, free)'
+  if (config.provider === 'zai-key') return `Z.ai · ${config.model || 'glm-4.6'}`
+  if (config.provider === 'local') return `Local · ${config.model || meta.defaultModel}`
   const model = config.model || meta.defaultModel
   return `${meta.label} · ${model}`
 }

@@ -112,7 +112,7 @@ export function GeekMode({ connected, providerConfig }: { connected: boolean; pr
 
       for (let iter = 1; iter <= MAX_ITERATIONS; iter++) {
         setCurrentIteration(iter)
-        const traceEntry: any = { iteration }
+        const traceEntry: any = { iteration: iter }
 
         // Rule
         setActiveEngine('rule'); setEngineState('rule', 'running', iter)
