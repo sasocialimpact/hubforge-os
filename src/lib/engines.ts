@@ -327,13 +327,13 @@ export async function reasoningEngine(
   outputTypes: OutputType[],
   answers?: Record<string, string>
 ): Promise<string> {
-  const frameworksText = retrieval.frameworks
-    .map((f) => `### ${f.name}\n${f.description}\nWhen to use: ${f.whenToUse}\nKey elements: ${f.keyElements.join(', ')}${f.template ? `\nTemplate: ${f.template}` : ''}`)
+  const frameworksText = (retrieval.frameworks || [])
+    .map((f: any) => `### ${f.name}\n${f.description || ''}\nWhen to use: ${f.whenToUse || ''}\nKey elements: ${(f.keyElements || []).join(', ')}${f.template ? `\nTemplate: ${f.template}` : ''}`)
     .join('\n\n')
-  const rulesText = retrieval.decisionRules.map((r) => `- ${r.name}: ${r.check} (pass: ${r.passCondition}; fail: ${r.failAction})`).join('\n')
-  const evidenceText = retrieval.evidence.map((e) => `- ${e.title} (${e.type}): ${e.summary}`).join('\n')
-  const memoryText = retrieval.historicalMemory.map((m) => `- Problem: ${m.problem}\n  Context: ${m.context}\n  Outcome: ${m.outcome}\n  Lesson: ${m.lesson}`).join('\n')
-  const patternsText = retrieval.reasoningPatterns.map((p) => `- ${p.name}: ${p.description}`).join('\n')
+  const rulesText = (retrieval.decisionRules || []).map((r: any) => `- ${r.name}: ${r.check || ''} (pass: ${r.passCondition || ''}; fail: ${r.failAction || ''})`).join('\n')
+  const evidenceText = (retrieval.evidence || []).map((e: any) => `- ${e.title} (${e.type}): ${e.summary || ''}`).join('\n')
+  const memoryText = (retrieval.historicalMemory || []).map((m: any) => `- Problem: ${m.problem || ''}\n  Context: ${m.context || ''}\n  Outcome: ${m.outcome || ''}\n  Lesson: ${m.lesson || ''}`).join('\n')
+  const patternsText = (retrieval.reasoningPatterns || []).map((p: any) => `- ${p.name}: ${p.description || ''}`).join('\n')
   const answersBlock = answers && Object.keys(answers).length > 0
     ? `\n## User's answers to clarifying questions (treat as authoritative input)\n${Object.entries(answers).map(([id, a]) => `- ${id}: ${a}`).join('\n')}`
     : ''
@@ -359,11 +359,11 @@ ${problem}${answersBlock}
 ${outputGuidance}
 
 # DECOMPOSITION (from Supervisor Engine)
-- Problem statement: ${decomposition.problemStatement}
-- Objectives: ${decomposition.objectives.join('; ')}
-- Scope: ${decomposition.scope}
-- Stakeholders: ${decomposition.stakeholders.map((s) => `${s.role} (${s.description})`).join('; ')}
-- Key considerations: ${decomposition.keyConsiderations.join('; ')}
+- Problem statement: ${decomposition.problemStatement || ''}
+- Objectives: ${(decomposition.objectives || []).join('; ')}
+- Scope: ${decomposition.scope || ''}
+- Stakeholders: ${(decomposition.stakeholders || []).map((s: any) => `${s.role} (${s.description || ''})`).join('; ')}
+- Key considerations: ${(decomposition.keyConsiderations || []).join('; ')}
 
 # RETRIEVED KNOWLEDGE
 
