@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles, ArrowRight, ArrowLeft, Loader2, FileText, Workflow, Table2, ClipboardCheck,
-  Settings, RefreshCw, Check, MessageSquare, Send, Lightbulb, Wand2, Copy, CheckCircle2,
+  Settings, RefreshCw, Check, MessageSquare, Send, Lightbulb, Wand2, Download, Copy, CheckCircle2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,6 +13,10 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { TheoryOfChangeDiagram, LogframeTable } from './deliverables'
+import { EditableTheoryOfChange, EditableLogframe } from './editable-deliverables'
+import {
+  exportStrategyToWord, exportStrategyToPDF, exportLogframeToExcel, exportToCToExcel, exportFullReportToPDF,
+} from '@/lib/export-utils'
 import { OUTPUT_OPTIONS, type OutputType, type ClarifyingQuestion, type StructuredOutputs, type EvaluationResult, type Decomposition } from '@/lib/types'
 import { providerDisplayLabel, type ProviderConfig } from '@/lib/providers'
 import {
@@ -424,38 +428,63 @@ function DeliverableView({
   const { draft, evaluation, structured, outputTypes } = deliverable
   const score = evaluation?.overall ?? 0
   const ready = score >= 80
-  const hasToc = structured?.toc && outputTypes.includes('toc')
-  const hasLogframe = structured?.logframe && outputTypes.includes('logframe')
-  const hasStrategy = outputTypes.includes('strategy') || outputTypes.includes('evaluation-plan')
+  const [editableToc, setEditableToc] = useState(structured?.toc || null)
+  const [editableLogframe, setEditableLogframe] = useState(structured?.logframe || null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  const hasToc = outputTypes.includes('toc')
+  const hasLogframe = outputTypes.includes('logframe')
+  const hasStrategy = outputTypes.includes('strategy') || outputTypes.includes('evaluation-plan')
 
   const tabs: { id: string; label: string; icon: any; show: boolean }[] = [
     { id: 'strategy', label: 'Strategy', icon: FileText, show: hasStrategy },
-    { id: 'toc', label: 'Theory of Change', icon: Workflow, show: !!hasToc },
-    { id: 'logframe', label: 'Logframe', icon: Table2, show: !!hasLogframe },
+    { id: 'toc', label: 'Theory of Change', icon: Workflow, show: hasToc && !!editableToc },
+    { id: 'logframe', label: 'Logframe', icon: Table2, show: hasLogframe && !!editableLogframe },
   ].filter((t) => t.show)
 
   const handleCopy = () => { navigator.clipboard?.writeText(draft); setCopied(true); setTimeout(() => setCopied(false), 1500) }
+  const handleWord = () => exportStrategyToWord(draft)
+  const handlePDF = () => exportFullReportToPDF(draft, editableToc, editableLogframe)
+  const handleExcelLogframe = () => editableLogframe && exportLogframeToExcel(editableLogframe)
+  const handleExcelToC = () => editableToc && exportToCToExcel(editableToc)
 
   return (
     <div className="space-y-4">
+      {/* Status + actions */}
       <Card className={cn('p-4', ready ? 'border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20' : 'border-amber-500/40 bg-amber-50/50 dark:bg-amber-950/20')}>
-        <div className="flex items-center gap-3">
-          <div className={cn('h-10 w-10 rounded-full flex items-center justify-center', ready ? 'bg-emerald-500' : 'bg-amber-500')}>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className={cn('h-10 w-10 rounded-full flex items-center justify-center shrink-0', ready ? 'bg-emerald-500' : 'bg-amber-500')}>
             {ready ? <CheckCircle2 className="h-5 w-5 text-white" /> : <RefreshCw className="h-5 w-5 text-white" />}
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h3 className="text-sm font-bold">{ready ? 'Ready to share' : 'Good draft — a few tweaks could help'}</h3>
-            <p className="text-xs text-muted-foreground">Quality score {score}/100 {ready ? '· meets our quality threshold' : '· below the 80 threshold but still usable'}</p>
+            <p className="text-xs text-muted-foreground">Quality score {score}/100 {ready ? '· meets our quality threshold' : '· below 80 but still usable'}</p>
           </div>
-          <div className="flex gap-1.5">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={handleCopy}>
-              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />} Copy
+          {/* Export dropdown */}
+          <div className="relative">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setExportOpen(s => !s)}>
+              <Download className="h-3.5 w-3.5" /> Export ▾
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={onReset}>
-              <RefreshCw className="h-3.5 w-3.5" /> New
-            </Button>
+            {exportOpen && (
+              <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-border rounded-lg shadow-lg py-1 w-44">
+                <button onClick={() => { handleWord(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📄 Word (.docx)</button>
+                <button onClick={() => { handlePDF(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📄 PDF (full report)</button>
+                {hasLogframe && <button onClick={() => { handleExcelLogframe(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📊 Excel — Logframe</button>}
+                {hasToc && <button onClick={() => { handleExcelToC(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📊 Excel — Theory of Change</button>}
+                <button onClick={() => { handleCopy(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📋 Copy text</button>
+              </div>
+            )}
           </div>
+          {tabs.length > 1 && (
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setIsEditing(e => !e)}>
+              {isEditing ? <><Check className="h-3.5 w-3.5" /> Done editing</> : <><RefreshCw className="h-3.5 w-3.5" /> Edit</>}
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={onReset}>
+            New
+          </Button>
         </div>
       </Card>
 
@@ -477,15 +506,15 @@ function DeliverableView({
           </TabsContent>
           <TabsContent value="toc" className="mt-3">
             <Card className="p-5">
-              {hasToc && structured?.toc ? <TheoryOfChangeDiagram data={structured.toc} /> : (
-                <p className="text-xs text-muted-foreground text-center py-8">Diagram not available.</p>
-              )}
+              {editableToc ? (
+                isEditing ? <EditableTheoryOfChange data={editableToc} onChange={setEditableToc} /> : <TheoryOfChangeDiagram data={editableToc} />
+              ) : <p className="text-xs text-muted-foreground text-center py-8">Diagram not available.</p>}
             </Card>
           </TabsContent>
           <TabsContent value="logframe" className="mt-3">
-            {hasLogframe && structured?.logframe ? <LogframeTable data={structured.logframe} /> : (
-              <Card className="p-5"><p className="text-xs text-muted-foreground text-center py-8">Logframe not available.</p></Card>
-            )}
+            {editableLogframe ? (
+              isEditing ? <EditableLogframe data={editableLogframe} onChange={setEditableLogframe} /> : <LogframeTable data={editableLogframe} />
+            ) : <Card className="p-5"><p className="text-xs text-muted-foreground text-center py-8">Logframe not available.</p></Card>}
           </TabsContent>
         </Tabs>
       )}

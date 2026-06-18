@@ -119,8 +119,11 @@ export default function Home() {
             <BrainCircuit className="h-3.5 w-3.5 text-amber-600" />
             <span>HubForge OS · open-source decision intelligence infrastructure</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span>build systems that think better.</span>
+          <div className="flex items-center gap-4">
+            <a href="/help" className="hover:text-amber-700 dark:hover:text-amber-400">Help</a>
+            <a href="/privacy" className="hover:text-amber-700 dark:hover:text-amber-400">Privacy</a>
+            <a href="/terms" className="hover:text-amber-700 dark:hover:text-amber-400">Terms</a>
+            <a href="/admin" className="hover:text-amber-700 dark:hover:text-amber-400">Admin</a>
             <Badge variant="outline" className="font-mono text-[10px]">Apache-2.0</Badge>
           </div>
         </div>
