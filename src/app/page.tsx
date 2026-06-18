@@ -104,13 +104,16 @@ export default function Home() {
       </header>
 
       <main className="flex-1">
-        {mode === 'general' ? (
+        {/* Keep both modes mounted to preserve state when switching.
+            Hide the inactive one with CSS instead of unmounting. */}
+        <div className={cn(mode === 'general' ? 'block' : 'hidden')}>
           <GeneralMode connected={connected} providerConfig={providerConfig} />
-        ) : (
+        </div>
+        <div className={cn(mode === 'geek' ? 'block' : 'hidden')}>
           <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
             <GeekMode connected={connected} providerConfig={providerConfig} />
           </div>
-        )}
+        </div>
       </main>
 
       <footer className="border-t border-border bg-background mt-auto">
