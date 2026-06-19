@@ -628,7 +628,7 @@ function PromptInspector() {
   const [selectedEngine, setSelectedEngine] = useState<string>('supervisor')
   const [view, setView] = useState<'system' | 'user'>('system')
 
-  // Get the ACTUAL prompts from engines.ts — no stale copies.
+  // Get the ACTUAL prompts from engines.ts - no stale copies.
   const current: EnginePromptInfo | null = getEnginePrompt(selectedEngine, socialImpactPack)
 
   return (
@@ -639,11 +639,11 @@ function PromptInspector() {
             <FileText className="h-4 w-4 text-amber-600" /> prompt inspector
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            The actual system + user prompts sent to the LLM for each engine. Live from <code className="bg-muted px-1 rounded">engines.ts</code> — no stale copies.
+            The actual system + user prompts sent to the LLM for each engine. Live from <code className="bg-muted px-1 rounded">engines.ts</code> - no stale copies.
           </p>
         </CardHeader>
         <CardContent>
-          {/* Engine selector — all 10 engines */}
+          {/* Engine selector - all 10 engines */}
           <div className="flex flex-wrap gap-1.5 mb-4">
             {ENGINE_IDS.map(engine => (
               <button key={engine} onClick={() => setSelectedEngine(engine)}
@@ -656,7 +656,7 @@ function PromptInspector() {
 
           {current ? (
             <>
-              {/* Engine meta — description + version + inputs + outputs */}
+              {/* Engine meta - description + version + inputs + outputs */}
               <div className="mb-3 p-3 rounded-md bg-muted/30 border border-border space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-medium">{current.engineName}</span>
@@ -747,26 +747,26 @@ function KnowledgePackEditor() {
   const fullItems: Record<string, any[]> = {
     frameworks: socialImpactPack.frameworks.map(f => ({
       name: f.name, desc: f.description, details: [
-        { label: 'When to use', value: (f as any).whenToUse || '—' },
-        { label: 'Key elements', value: Array.isArray((f as any).keyElements) ? (f as any).keyElements.join(', ') : '—' },
+        { label: 'When to use', value: (f as any).whenToUse || '-' },
+        { label: 'Key elements', value: Array.isArray((f as any).keyElements) ? (f as any).keyElements.join(', ') : '-' },
       ],
     })),
     rules: socialImpactPack.decisionRules.map(r => ({
       name: r.name, desc: (r as any).check || r.name, details: [
-        { label: 'Pass condition', value: (r as any).passCondition || '—' },
-        { label: 'Fail action', value: (r as any).failAction || '—' },
+        { label: 'Pass condition', value: (r as any).passCondition || '-' },
+        { label: 'Fail action', value: (r as any).failAction || '-' },
       ],
     })),
     evidence: socialImpactPack.evidence.map(e => ({
       name: e.title, desc: (e as any).summary || '', details: [
-        { label: 'Type', value: (e as any).type || '—' },
-        { label: 'Source', value: (e as any).source || '—' },
+        { label: 'Type', value: (e as any).type || '-' },
+        { label: 'Source', value: (e as any).source || '-' },
       ],
     })),
     memory: socialImpactPack.historicalMemory.map(m => ({
       name: (m as any).problem || (m as any).title || 'Case', desc: (m as any).lesson || (m as any).outcome || '', details: [
-        { label: 'Context', value: (m as any).context || '—' },
-        { label: 'Approach', value: (m as any).approach || '—' },
+        { label: 'Context', value: (m as any).context || '-' },
+        { label: 'Approach', value: (m as any).approach || '-' },
       ],
     })),
     patterns: socialImpactPack.reasoningPatterns.map(p => ({

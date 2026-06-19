@@ -9,17 +9,17 @@
 //   - Shared 'zai' provider: 5 strategy generations per day per profileId
 //   - Own-key providers: unlimited (the user's provider handles their limits)
 //   - Individual engine steps (retrieval, rule, critique, etc.) are NOT counted
-//     — only the full interview (start of a generation) counts as 1 "strategy".
+//     - only the full interview (start of a generation) counts as 1 "strategy".
 //     This prevents the 9-engine pipeline from consuming 9x the allowance.
 //
 // BYPASS HARDENING:
 //   - Callers MUST pass a profileId. Anonymous (profileId=null) requests are
-//     no longer given unlimited access — they get a strict per-IP daily quota
+//     no longer given unlimited access - they get a strict per-IP daily quota
 //     (DAILY_LIMIT) so an attacker can't bypass rate limits by simply
 //     omitting the header.
 //
 // Storage: in-memory Map per server instance. On Vercel serverless this means
-// each instance tracks its own subset of users — not perfectly accurate, but
+// each instance tracks its own subset of users - not perfectly accurate, but
 // good enough to prevent abuse. For strict accuracy, move to a shared store
 // (Upstash Redis, Supabase) via the COUNT_KEY pattern below.
 
@@ -46,7 +46,7 @@ export interface RateLimitResult {
 
 /**
  * Check if a user can make a strategy generation call.
- * Does NOT increment the counter — call recordStrategyGeneration() after a
+ * Does NOT increment the counter - call recordStrategyGeneration() after a
  * successful generation.
  */
 export function checkRateLimit(profileId: string | null | undefined, provider: string): RateLimitResult {
@@ -63,7 +63,7 @@ export function checkRateLimit(profileId: string | null | undefined, provider: s
     }
   }
 
-  // Shared key — enforce per-user daily limit.
+  // Shared key - enforce per-user daily limit.
   // We require a profileId. If none is supplied, fall back to the anonymous
   // bucket ("anon") so untracked callers share the same DAILY_LIMIT rather
   // than getting unlimited access. This closes the bypass where an attacker

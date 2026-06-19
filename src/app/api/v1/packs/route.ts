@@ -1,4 +1,4 @@
-// GET /api/v1/packs — List available domain packs.
+// GET /api/v1/packs - List available domain packs.
 // Currently only the Social Impact Pack exists. As the platform opens,
 // third-party packs will appear here (the "app store" moment).
 import { NextResponse } from 'next/server'
@@ -23,6 +23,6 @@ export async function GET() {
   return NextResponse.json({
     packs: PACKS,
     total: PACKS.length,
-    note: 'Domain packs are open-format. Anyone can build one — see the Knowledge Graph Schema spec at /docs/schema.',
+    note: 'Domain packs are open-format. Anyone can build one - see the Knowledge Graph Schema spec at /docs/schema.',
   })
 }

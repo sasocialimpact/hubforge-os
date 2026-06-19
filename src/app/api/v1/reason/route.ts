@@ -1,4 +1,4 @@
-// POST /api/v1/reason — Public API v1: run the 9-engine reasoning pipeline.
+// POST /api/v1/reason - Public API v1: run the 9-engine reasoning pipeline.
 //
 // This is the Win32 moment. Third parties can now call HubForge's kernel
 // programmatically: NGOs, consultants, donor platforms, other M&E tools.

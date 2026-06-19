@@ -4,7 +4,7 @@
 //   - The anon key is designed to be public (RLS protects data).
 //   - Programs/context-blocks are large JSON blobs; routing them through our
 //     API doubles bandwidth and adds latency.
-//   - It's the user's data — the request should go directly to their DB,
+//   - It's the user's data - the request should go directly to their DB,
 //     bypassing HubForge servers entirely.
 //
 // localStorage remains the source of truth for instant UI feedback. After
@@ -43,7 +43,7 @@ export function getOrgSupabaseBrowser(): SupabaseClient | null {
   }
 }
 
-/** Drop the cached client — call after the user disconnects their Supabase. */
+/** Drop the cached client - call after the user disconnects their Supabase. */
 export function resetOrgSupabaseBrowser(): void {
   cachedClient = null
   cachedUrl = ''

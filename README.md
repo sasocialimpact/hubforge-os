@@ -1,7 +1,7 @@
 # HubForge OS - Social Impact Pack
 
 > Build expert-grade program strategies, theories of change, and logframes in minutes.
-> For NGOs and social impact organizations — no M&E expertise needed.
+> For NGOs and social impact organizations - no M&E expertise needed.
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org)
@@ -11,7 +11,7 @@
 
 ## What is HubForge OS?
 
-An open-source **MEL (Monitoring, Evaluation & Learning) operating system** that helps NGO program officers build fundable strategies, theories of change, logframes, and evaluation plans — without needing a monitoring & evaluation specialist on staff.
+An open-source **MEL (Monitoring, Evaluation & Learning) operating system** that helps NGO program officers build fundable strategies, theories of change, logframes, and evaluation plans - without needing a monitoring & evaluation specialist on staff.
 
 Under the hood runs a **9-engine recursive reasoning pipeline** (Supervisor → Retrieval → Web Search → Rule → Reasoning → Critique → Improvement → Evaluation → Structure) grounded in a Social Impact knowledge graph (6 frameworks, 5 decision rules, 5 evidence sources, 3 historical cases).
 
@@ -26,7 +26,7 @@ bun run dev
 
 Open the app via the **Preview Panel** (or `http://localhost:3000` locally).
 
-> The app works immediately with **zero configuration** — Z.ai's free shared key is used by default.
+> The app works immediately with **zero configuration** - Z.ai's free shared key is used by default.
 
 ## Two modes
 
@@ -35,11 +35,11 @@ Open the app via the **Preview Panel** (or `http://localhost:3000` locally).
 | **General Mode** (default) | NGO program officers | Guided wizard: describe project → answer clarifying questions → get strategy + ToC diagram + logframe table → give feedback → get revised version |
 | **Geek Mode** | Developers / AI engineers | Full 9-engine pipeline visualization, per-engine provider config, prompt inspection, model comparison, knowledge graph browser |
 
-## AI providers (bring your own key — or use ours)
+## AI providers (bring your own key - or use ours)
 
 | Provider | Cost | Setup |
 |----------|------|-------|
-| **Z.ai (shared)** | Free | None — works out of the box |
+| **Z.ai (shared)** | Free | None - works out of the box |
 | **Z.ai (own key)** | Free | Get key at z.ai/manage/apikey |
 | **Groq** | Free tier | Get key at console.groq.com/keys |
 | **Google Gemini** | Free tier | Get key at aistudio.google.com |
@@ -49,7 +49,7 @@ Open the app via the **Preview Panel** (or `http://localhost:3000` locally).
 
 > **Your keys never leave your browser.** They're stored in `localStorage` and sent directly to the provider. HubForge servers never see them.
 
-## Data ownership — connect your own Supabase (NEW)
+## Data ownership - connect your own Supabase (NEW)
 
 By default, your data (programs, sessions, context blocks) lives in your browser's `localStorage`. That's fine for trying things out, but it's lost if you clear your browser.
 
@@ -61,12 +61,12 @@ By default, your data (programs, sessions, context blocks) lives in your browser
 4. Done. Your programs, sessions, context blocks, profile, analytics, and lessons now live in **YOUR** database.
 
 **What this gives you:**
-- ✅ Full data ownership — your data never touches HubForge servers
-- ✅ Cross-device sync — your programs appear on any browser you sign into
-- ✅ Direct query access — run SQL against your own data anytime
+- ✅ Full data ownership - your data never touches HubForge servers
+- ✅ Cross-device sync - your programs appear on any browser you sign into
+- ✅ Direct query access - run SQL against your own data anytime
 - ✅ Export, share, or delete your data on your terms
 
-> The Supabase **anon key** is designed to be public (Row Level Security protects data). It's stored in your browser and sent directly to YOUR Supabase — never to HubForge servers.
+> The Supabase **anon key** is designed to be public (Row Level Security protects data). It's stored in your browser and sent directly to YOUR Supabase - never to HubForge servers.
 
 ## Architecture
 
@@ -81,23 +81,23 @@ By default, your data (programs, sessions, context blocks) lives in your browser
 1. Push to GitHub
 2. Go to [vercel.com](https://vercel.com) → Import repo → Deploy
 3. (Optional) Add `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` env vars for platform-level analytics + server-side auth
-4. (Optional but recommended) Set `HUBFORGE_ADMIN_KEY` to a long random string to enable the `/admin` dashboard. **If unset, `/admin` returns 403 — there is no insecure default.**
+4. (Optional but recommended) Set `HUBFORGE_ADMIN_KEY` to a long random string to enable the `/admin` dashboard. **If unset, `/admin` returns 403 - there is no insecure default.**
 5. (Optional) Set `HUBFORGE_ALLOWED_ORIGINS` (comma-separated) only if users need to connect to self-hosted Supabase instances not on `*.supabase.co`.
 
 Cost: **$0/month** on free tiers.
 
 ## Features
 
-- **9-engine recursive reasoning pipeline** — Supervisor → Retrieval → Web Search → Rule → Reasoning → Critique → Improvement → Evaluation → Structure, with quality threshold + iterative improvement.
-- **Identity & auth layer** — email + PBKDF2-hashed password, GDPR/DPDP consent record, right-to-export, right-to-be-forgotten. Anonymous users see the landing page only; "Launch App" opens signup.
-- **7 AI providers** — shared Z.ai (free, rate-limited) or bring your own key (OpenAI, Anthropic, Gemini, Groq, Z.ai own key, local Ollama). User API keys never touch HubForge servers — they go from the browser directly to the provider.
-- **Program workspaces** — save/resume multiple programs, tag by donor / geography / sector / budget, sync to your own Supabase.
-- **Templates** — 5 offline-capable program templates (FLN, school feeding, water rehab, climate-smart ag, MCH) that create a 90% complete program in <1 second with no AI.
-- **Monitoring tracker** — derive indicators from logframe OVIs, add readings over time, RAG (Red/Amber/Green) status computed automatically, next-due-date scheduling.
-- **Public API v1** — `POST /api/v1/reason`, `POST /api/v1/structure`, `GET /api/v1/knowledge`, `GET /api/v1/packs`, `GET /api/v1/health`. Third parties can call HubForge's 9-engine kernel programmatically.
-- **Smart caching** — interview, retrieval, web search, and structure results are cached in `localStorage` for 24h–7d. Reasoning / critique / improvement / evaluation are always fresh.
-- **Admin dashboard** — `/admin` shows analytics (DAU, conversion funnel, provider usage, quality distribution, recent errors) gated by `HUBFORGE_ADMIN_KEY`.
-- **PWA** — installable, offline-capable (templates + monitoring + editing + export all work without AI or internet).
+- **9-engine recursive reasoning pipeline** - Supervisor → Retrieval → Web Search → Rule → Reasoning → Critique → Improvement → Evaluation → Structure, with quality threshold + iterative improvement.
+- **Identity & auth layer** - email + PBKDF2-hashed password, GDPR/DPDP consent record, right-to-export, right-to-be-forgotten. Anonymous users see the landing page only; "Launch App" opens signup.
+- **7 AI providers** - shared Z.ai (free, rate-limited) or bring your own key (OpenAI, Anthropic, Gemini, Groq, Z.ai own key, local Ollama). User API keys never touch HubForge servers - they go from the browser directly to the provider.
+- **Program workspaces** - save/resume multiple programs, tag by donor / geography / sector / budget, sync to your own Supabase.
+- **Templates** - 5 offline-capable program templates (FLN, school feeding, water rehab, climate-smart ag, MCH) that create a 90% complete program in <1 second with no AI.
+- **Monitoring tracker** - derive indicators from logframe OVIs, add readings over time, RAG (Red/Amber/Green) status computed automatically, next-due-date scheduling.
+- **Public API v1** - `POST /api/v1/reason`, `POST /api/v1/structure`, `GET /api/v1/knowledge`, `GET /api/v1/packs`, `GET /api/v1/health`. Third parties can call HubForge's 9-engine kernel programmatically.
+- **Smart caching** - interview, retrieval, web search, and structure results are cached in `localStorage` for 24h–7d. Reasoning / critique / improvement / evaluation are always fresh.
+- **Admin dashboard** - `/admin` shows analytics (DAU, conversion funnel, provider usage, quality distribution, recent errors) gated by `HUBFORGE_ADMIN_KEY`.
+- **PWA** - installable, offline-capable (templates + monitoring + editing + export all work without AI or internet).
 
 ## Documentation
 
@@ -122,7 +122,7 @@ Works offline (app shell cached by service worker). AI calls require connectivit
 
 ## License
 
-[Apache-2.0](LICENSE) — free for commercial and non-commercial use.
+[Apache-2.0](LICENSE) - free for commercial and non-commercial use.
 
 ## Contributing
 

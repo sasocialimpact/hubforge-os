@@ -2,7 +2,7 @@
 //
 // Data ownership priority:
 //   1. User's own Supabase (X-Org-Supabase-* headers) → events go to THEIR DB
-//   2. Platform Supabase (env vars) — for platform-level analytics (opt-in)
+//   2. Platform Supabase (env vars) - for platform-level analytics (opt-in)
 //   3. In-memory store
 //
 // ADMIN KEY:

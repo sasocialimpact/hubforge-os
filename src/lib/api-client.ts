@@ -27,51 +27,51 @@ async function apiCall(path: string, body: any): Promise<any> {
 }
 
 export async function callInterview(problem: string, providerConfig: ProviderConfig): Promise<{ decomposition: Decomposition; questions: ClarifyingQuestion[]; provider: string }> {
-  // Interview results are cacheable for 24h — the decomposition + questions
+  // Interview results are cacheable for 24h - the decomposition + questions
   // for the same problem don't change day-to-day.
   return cache.interview(problem, providerConfig.provider, () =>
     apiCall('/api/interview', { problem, providerConfig })
   )
 }
 export async function callRetrieval(problem: string, decomposition: Decomposition): Promise<any> {
-  // Retrieval is deterministic (knowledge graph lookup) — cache 7 days.
+  // Retrieval is deterministic (knowledge graph lookup) - cache 7 days.
   return cache.retrieval(problem, JSON.stringify(decomposition).slice(0, 100), () =>
     apiCall('/api/run-step', { step: 'retrieval', problem, decomposition })
   )
 }
 export async function callRuleChecks(problem: string): Promise<any> {
-  // Rule checks are deterministic — no LLM call, no need to cache.
+  // Rule checks are deterministic - no LLM call, no need to cache.
   return apiCall('/api/run-step', { step: 'rule', problem })
 }
 export async function callReasoning(params: { problem: string; decomposition: Decomposition; retrieval: any; priorCritique: string | null; priorDraft: string | null; iteration: number; maxIterations: number; outputTypes: OutputType[]; answers: Record<string, string>; providerConfig: ProviderConfig; orgContext?: string; contextBlocks?: string }): Promise<string> {
-  // Reasoning is NOT cached — must be fresh each time (iteration-aware).
+  // Reasoning is NOT cached - must be fresh each time (iteration-aware).
   const r = await apiCall('/api/run-step', { ...params, step: 'reasoning' }); return r.output
 }
 export async function callCritique(draft: string, providerConfig: ProviderConfig): Promise<any> {
-  // Critique is NOT cached — needs to evaluate the current draft.
+  // Critique is NOT cached - needs to evaluate the current draft.
   const r = await apiCall('/api/run-step', { step: 'critique', draft, providerConfig }); return r.output
 }
 export async function callImprovement(draft: string, critique: any, providerConfig: ProviderConfig): Promise<string> {
-  // Improvement is NOT cached — needs to act on the current critique.
+  // Improvement is NOT cached - needs to act on the current critique.
   const r = await apiCall('/api/run-step', { step: 'improvement', draft, critique, providerConfig }); return r.output
 }
 export async function callEvaluation(improved: string, providerConfig: ProviderConfig, threshold = 80): Promise<EvaluationResult> {
-  // Evaluation is NOT cached — needs to score the current improved draft.
+  // Evaluation is NOT cached - needs to score the current improved draft.
   const r = await apiCall('/api/run-step', { step: 'evaluation', improved, providerConfig, threshold }); return r.output
 }
 export async function callStructure(finalDraft: string, outputTypes: OutputType[], providerConfig: ProviderConfig): Promise<StructuredOutputs> {
-  // Structure extraction is cacheable for 24h — same draft → same ToC/Logframe.
+  // Structure extraction is cacheable for 24h - same draft → same ToC/Logframe.
   const draftHash = String(hashCode(finalDraft))
   return cache.structure(draftHash, outputTypes.join(','), () =>
     apiCall('/api/structure', { finalDraft, outputTypes, providerConfig })
   )
 }
 export async function callFeedback(currentDraft: string, feedback: string, outputTypes: OutputType[], providerConfig: ProviderConfig): Promise<{ improved: string; addressed: string[]; evaluation: EvaluationResult; structured: StructuredOutputs }> {
-  // Feedback is NOT cached — user feedback is unique each time.
+  // Feedback is NOT cached - user feedback is unique each time.
   return apiCall('/api/feedback', { currentDraft, feedback, outputTypes, providerConfig })
 }
 export async function callWebSearch(problem: string, decomposition: any, providerConfig: ProviderConfig): Promise<{ demographic: any[]; previousPrograms: any[]; evidence: any[]; summary: string }> {
-  // Web search results (demographics, previous programs) change slowly — cache 7 days.
+  // Web search results (demographics, previous programs) change slowly - cache 7 days.
   return cache.webSearch(problem.slice(0, 200), 'all', () =>
     apiCall('/api/search', { problem, decomposition, providerConfig })
   )

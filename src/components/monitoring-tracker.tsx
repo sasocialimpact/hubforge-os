@@ -207,7 +207,7 @@ function IndicatorCard({
           {/* Progress */}
           <div className="hidden sm:flex flex-col items-end gap-0.5 w-32">
             <div className="text-xs font-mono">
-              <span className="font-bold">{indicator.current ?? '—'}</span>
+              <span className="font-bold">{indicator.current ?? '-'}</span>
               <span className="text-muted-foreground"> / {indicator.target}</span>
               {indicator.unit && <span className="text-muted-foreground"> {indicator.unit}</span>}
             </div>
@@ -294,7 +294,7 @@ function IndicatorCard({
                     <span className="font-mono text-muted-foreground shrink-0">{r.date}</span>
                     <span className="font-bold">{r.value}</span>
                     {indicator.unit && <span className="text-muted-foreground">{indicator.unit}</span>}
-                    {r.note && <span className="text-muted-foreground truncate flex-1">— {r.note}</span>}
+                    {r.note && <span className="text-muted-foreground truncate flex-1">- {r.note}</span>}
                     <button onClick={() => onDeleteReading(r.id)} className="text-muted-foreground hover:text-red-500 shrink-0 ml-auto">
                       <Trash2 className="h-3 w-3" />
                     </button>

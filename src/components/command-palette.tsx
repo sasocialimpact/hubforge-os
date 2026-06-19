@@ -19,14 +19,14 @@ import {
 import { hasOrgSupabase } from '@/lib/org-supabase'
 
 // ───────────────────────────────────────────────────────────────────────────
-// Command Center — a unified panel that merges the command palette and the
+// Command Center - a unified panel that merges the command palette and the
 // settings dialog into one Claude-style surface.
 //
 // Opens via Cmd+K OR the Settings button (both trigger the same panel).
 // Layout:
 //   1. Search bar at top (filters commands)
 //   2. Actions section (filtered by search)
-//   3. AI Provider section (always visible — form, not a command)
+//   3. AI Provider section (always visible - form, not a command)
 //   4. Navigation section (filtered by search)
 //   5. Save button (persists provider config)
 // ───────────────────────────────────────────────────────────────────────────
@@ -87,7 +87,7 @@ export function CommandCenter({
     onProviderSaved?.(config)
   }
 
-  // Build the command list (excludes provider settings — those are a form).
+  // Build the command list (excludes provider settings - those are a form).
   const commands: CommandItem[] = [
     ...(onNewProgram ? [{
       id: 'new-program', label: 'New Program', hint: 'Start a new strategy', icon: Plus,
@@ -290,7 +290,7 @@ export function CommandCenter({
                 </div>
               )}
 
-              {/* AI Provider section — always visible (it's a form, not a command) */}
+              {/* AI Provider section - always visible (it's a form, not a command) */}
               <div className="border-t border-border">
                 <button
                   type="button"
@@ -305,7 +305,7 @@ export function CommandCenter({
 
                 {providerSectionOpen && (
                   <div className="px-4 pb-4 space-y-2">
-                    {/* Provider picker — compact list */}
+                    {/* Provider picker - compact list */}
                     <div className="space-y-1">
                       {PROVIDERS.map((meta) => {
                         const selected = config.provider === meta.id
@@ -343,7 +343,7 @@ export function CommandCenter({
                       })}
                     </div>
 
-                    {/* Key + model + URL — only for non-shared providers */}
+                    {/* Key + model + URL - only for non-shared providers */}
                     {selectedMeta.id !== 'zai' && (
                       <div className="space-y-2 rounded-md border border-border p-2.5 bg-muted/20">
                         {selectedMeta.needsKey && (
@@ -407,7 +407,7 @@ export function CommandCenter({
                     )}
 
                     <p className="text-[9px] text-muted-foreground leading-relaxed">
-                      Your key stays in this browser. Sent directly to your provider — never to HubForge servers.
+                      Your key stays in this browser. Sent directly to your provider - never to HubForge servers.
                     </p>
                   </div>
                 )}

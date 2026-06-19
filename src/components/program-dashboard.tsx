@@ -19,9 +19,9 @@ import { cn } from '@/lib/utils'
 interface ProgramDashboardProps {
   onNewProgram: () => void
   onOpenProgram: (program: Program) => void
-  /** Open the AI provider settings dialog (used by the scaling nudge). Optional — falls back to /help. */
+  /** Open the AI provider settings dialog (used by the scaling nudge). Optional - falls back to /help. */
   onOpenSettings?: () => void
-  /** Open the data-storage (Supabase) dialog (used by the scaling nudge). Optional — falls back to /help. */
+  /** Open the data-storage (Supabase) dialog (used by the scaling nudge). Optional - falls back to /help. */
   onOpenDataStorage?: () => void
 }
 
@@ -92,7 +92,7 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram, onOpenSettings, 
     setPrograms(getPrograms())
   }
 
-  // Start from a template — creates a program instantly with pre-filled ToC +
+  // Start from a template - creates a program instantly with pre-filled ToC +
   // logframe + budget + risks. NO AI, NO internet needed. This is the offline
   // path: the user gets a 90% complete program in <1 second.
   const handleStartFromTemplate = (tpl: any) => {
@@ -155,7 +155,7 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram, onOpenSettings, 
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
-      {/* Scaling nudge — only when on shared key AND no own Supabase. */}
+      {/* Scaling nudge - only when on shared key AND no own Supabase. */}
       {showScalingNudge && (
         <Card className="p-3 border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20">
           <div className="flex items-start gap-3">
@@ -229,7 +229,7 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram, onOpenSettings, 
         </div>
       </div>
 
-      {/* Templates — instant, offline, no AI needed */}
+      {/* Templates - instant, offline, no AI needed */}
       <div>
         <div className="flex items-center gap-2 mb-2">
           <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Start from a template</p>
@@ -384,7 +384,7 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram, onOpenSettings, 
 }
 
 // Generate a readable strategy draft from a template's structured data.
-// This gives the user something to read/edit immediately — no AI needed.
+// This gives the user something to read/edit immediately - no AI needed.
 function generateTemplateDraft(tpl: any): string {
   const lines: string[] = [
     `# ${tpl.name}`,
@@ -436,7 +436,7 @@ function generateTemplateDraft(tpl: any): string {
   if (tpl.budget && tpl.budget.length > 0) {
     lines.push('', '## Budget Allocation')
     tpl.budget.forEach((b: any) => {
-      lines.push(`- ${b.category}: ${b.percentage}% — ${b.description}`)
+      lines.push(`- ${b.category}: ${b.percentage}% - ${b.description}`)
     })
   }
   return lines.join('\n')

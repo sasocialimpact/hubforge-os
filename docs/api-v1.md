@@ -1,4 +1,4 @@
-# HubForge OS — Public API v1
+# HubForge OS - Public API v1
 
 > The Win32 moment. Call HubForge's 9-engine kernel programmatically.
 > Base URL: `https://your-deployment.vercel.app`
@@ -38,7 +38,7 @@ Run the full 9-engine reasoning pipeline on a problem.
 **Request:**
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `problem` | string | Yes | — | The problem to solve (max 10000 chars) |
+| `problem` | string | Yes | - | The problem to solve (max 10000 chars) |
 | `providerConfig` | object | No | `{provider:"zai"}` | AI provider config (see below) |
 | `outputTypes` | string[] | No | `["strategy"]` | What to produce: `strategy`, `toc`, `logframe`, `evaluation-plan` |
 | `maxIterations` | number | No | `2` | Max reasoning iterations (1-3) |
@@ -70,7 +70,7 @@ Run the full 9-engine reasoning pipeline on a problem.
 | `ruleChecks` | object | Results of 5 decision rules |
 | `provider` | string | Human-readable provider label |
 | `durationMs` | number | Total pipeline duration |
-| `rateLimit` | object | `{ used, limit, remaining }` — shared key users only |
+| `rateLimit` | object | `{ used, limit, remaining }` - shared key users only |
 
 ### POST /api/v1/structure
 Extract Theory of Change + Logframe from a strategy document.
@@ -124,4 +124,4 @@ See [docs/knowledge-graph-schema.md](../docs/knowledge-graph-schema.md) for the 
 
 ## License
 
-Apache-2.0 — free for commercial and non-commercial use.
+Apache-2.0 - free for commercial and non-commercial use.

@@ -47,7 +47,7 @@ const FEATURES = [
   {
     icon: Shield,
     title: 'Your Data, Your Database',
-    desc: 'Connect your own Supabase. Programs, sessions, and lessons live in YOUR database — never on HubForge servers. Full ownership, zero lock-in.',
+    desc: 'Connect your own Supabase. Programs, sessions, and lessons live in YOUR database - never on HubForge servers. Full ownership, zero lock-in.',
     color: 'text-blue-600',
     bg: 'bg-blue-50 dark:bg-blue-950/20',
   },
@@ -193,7 +193,7 @@ export function LandingPage({ onLaunch, onSignIn }: LandingPageProps) {
             className="text-base text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed"
           >
             Build expert-grade program strategies, theories of change, logframes, and evaluation plans in minutes.
-            For NGOs and social impact organizations — no M&E expertise needed.
+            For NGOs and social impact organizations - no M&E expertise needed.
           </motion.p>
 
           {/* CTAs */}
@@ -238,7 +238,7 @@ export function LandingPage({ onLaunch, onSignIn }: LandingPageProps) {
             <Badge variant="outline" className="mb-3 text-xs font-mono">THE ENGINE</Badge>
             <h2 className="text-3xl font-bold mb-3">9-Engine Recursive Reasoning</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Not a single LLM call. A bounded recursive loop that decomposes, drafts, critiques, improves, and evaluates — until quality meets the threshold.
+              Not a single LLM call. A bounded recursive loop that decomposes, drafts, critiques, improves, and evaluates - until quality meets the threshold.
             </p>
           </div>
 
@@ -323,7 +323,7 @@ export function LandingPage({ onLaunch, onSignIn }: LandingPageProps) {
           <div className="space-y-6">
             {[
               { step: 1, title: 'Describe your problem', desc: 'Type what you\'re working on. Example: "Improve school attendance for 2,000 children in rural Kenya."' },
-              { step: 2, title: 'Answer a few questions', desc: 'The Supervisor engine asks 2-4 clarifying questions. Skip any — the AI uses public evidence and best assumptions.' },
+              { step: 2, title: 'Answer a few questions', desc: 'The Supervisor engine asks 2-4 clarifying questions. Skip any - the AI uses public evidence and best assumptions.' },
               { step: 3, title: 'Watch the 9 engines run', desc: 'Live pipeline visualization. Each engine streams its output in real time. Takes 60-90 seconds.' },
               { step: 4, title: 'Get your deliverables', desc: 'Strategy document, Theory of Change flowchart, Logframe table, Evaluation plan. Edit inline, export to Word/PDF/Excel, give feedback for revisions.' },
             ].map((item) => (
@@ -349,7 +349,7 @@ export function LandingPage({ onLaunch, onSignIn }: LandingPageProps) {
             <h2 className="text-2xl font-bold mb-3">Your data stays in your database</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto mb-6 leading-relaxed">
               Connect your own Supabase and your programs, sessions, context blocks, and lessons live in YOUR database.
-              HubForge servers never store your data. You can query it, export it, share it — on your terms.
+              HubForge servers never store your data. You can query it, export it, share it - on your terms.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
               <div className="flex items-center gap-1.5"><Check className="h-4 w-4 text-emerald-600" /> Full data ownership</div>

@@ -9,7 +9,7 @@
 // The anon key is safe to use from the browser (it is designed to be public
 // with Row Level Security). The user runs the SQL setup script in THEIR
 // Supabase project, which creates the tables and RLS policies. HubForge
-// platform servers NEVER see the user's data — they only proxy the request
+// platform servers NEVER see the user's data - they only proxy the request
 // to the user's Supabase.
 //
 // SSRF HARDENING:
@@ -82,7 +82,7 @@ export function getOrgSupabaseCredsFromRequest(req: NextRequest): OrgSupabaseCre
   // Port: reject weird ports for HTTPS (default 443 allowed implicitly).
   // Allow only standard ports (none / 443 / 80 for dev).
   if (parsed.port && parsed.port !== '443' && parsed.port !== '80') {
-    // Self-hosted Supabase may run on custom ports — allow only if the
+    // Self-hosted Supabase may run on custom ports - allow only if the
     // host is a local dev host.
     if (!isLocalDevHost(parsed.hostname)) return null
   }

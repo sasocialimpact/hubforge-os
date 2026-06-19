@@ -1,4 +1,4 @@
-// Platform Supabase client (env-var based) — shared across API routes.
+// Platform Supabase client (env-var based) - shared across API routes.
 //
 // Connection pooling: Supabase recommends using the pooler URL
 // (db.{project}.supabase.co:6543) for serverless deployments to avoid

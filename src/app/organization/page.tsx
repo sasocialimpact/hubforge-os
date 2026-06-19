@@ -19,7 +19,7 @@ import {
 } from '@/lib/organization'
 import { cn } from '@/lib/utils'
 
-// Collapsible section wrapper — keeps the single panel compact while still
+// Collapsible section wrapper - keeps the single panel compact while still
 // letting users jump to the section they want to edit.
 function Section({
   icon: Icon, title, subtitle, open, onToggle, children,
@@ -113,7 +113,7 @@ export default function OrganizationPage() {
     router.push('/')
   }
 
-  // On the server (window undefined) profile is null — render a loading
+  // On the server (window undefined) profile is null - render a loading
   // placeholder to avoid hydration mismatch. The client lazy-inits from
   // localStorage on first render, so this only flashes for SSR.
   if (!profile) {
@@ -366,9 +366,9 @@ export default function OrganizationPage() {
             </div>
             <p className="text-xs text-muted-foreground">
               {profile.name && <span><strong>{profile.name}</strong></span>}
-              {profile.sectors.length > 0 && <span> — {profile.sectors.join(', ')}</span>}
-              {profile.operatingCountries.length > 0 && <span> — {profile.operatingCountries.join(', ')}</span>}
-              {profile.budgetRange && <span> — {profile.budgetRange}</span>}
+              {profile.sectors.length > 0 && <span> - {profile.sectors.join(', ')}</span>}
+              {profile.operatingCountries.length > 0 && <span> - {profile.operatingCountries.join(', ')}</span>}
+              {profile.budgetRange && <span> - {profile.budgetRange}</span>}
             </p>
           </Card>
         )}

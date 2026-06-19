@@ -1,15 +1,15 @@
-// LLM Rate Limiter + Queue — protects the shared Z.ai key from being
+// LLM Rate Limiter + Queue - protects the shared Z.ai key from being
 // overwhelmed when many users hit the platform at once.
 //
 // Strategy:
 //   - Only applies to the SHARED 'zai' provider (no user key). Users who bring
-//     their own API key bypass this entirely — they're rate-limited by their
+//     their own API key bypass this entirely - they're rate-limited by their
 //     own provider, not by us.
 //   - Uses a sliding-window counter (max N calls per M seconds).
 //   - When the window is full, requests are queued and retried with exponential
 //     backoff until the window drains or the request times out.
 //   - In-memory per server instance. On Vercel serverless this means each
-//     function instance has its own counter — good enough for soft protection
+//     function instance has its own counter - good enough for soft protection
 //     and analytics. For strict limits, pair with the per-user limiter
 //     (rate-limit-server.ts) which keys on profileId.
 
@@ -70,12 +70,12 @@ async function drainQueue() {
       const item = queue.shift()!
       // Check if this item has expired.
       if (Date.now() - item.enqueuedAt > MAX_QUEUE_WAIT_MS) {
-        item.reject(new Error('Rate limit queue timeout — too many requests. Try again in a minute, or add your own API key in Settings for unlimited access.'))
+        item.reject(new Error('Rate limit queue timeout - too many requests. Try again in a minute, or add your own API key in Settings for unlimited access.'))
         continue
       }
       item.resolve()
       // The caller will call releaseCall() when their LLM call finishes.
-      // Don't loop too tightly — give the admitted call a moment to start.
+      // Don't loop too tightly - give the admitted call a moment to start.
       await new Promise((r) => setTimeout(r, 50))
     }
   } finally {

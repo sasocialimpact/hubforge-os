@@ -1,4 +1,4 @@
-// POST /api/v1/structure — Extract Theory of Change + Logframe from a strategy document.
+// POST /api/v1/structure - Extract Theory of Change + Logframe from a strategy document.
 //
 // Request:
 //   {

@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const adminKey = searchParams.get('admin_key')
 
-    // Admin view: only uses platform Supabase / in-memory (NOT user's own DB —
+    // Admin view: only uses platform Supabase / in-memory (NOT user's own DB -
     // admin dashboard is platform-level, not per-user).
     if (adminKey) {
       if (!requireAdminKey(adminKey)) {

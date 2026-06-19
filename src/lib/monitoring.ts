@@ -1,4 +1,4 @@
-// Monitoring Tracker — the bridge from planning tool to operating system.
+// Monitoring Tracker - the bridge from planning tool to operating system.
 //
 // Without this, strategies die at submission. With it:
 //   - Indicators (from the logframe OVIs) get tracked over time

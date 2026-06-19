@@ -14,7 +14,7 @@ const MAX_PROBLEM = 10000
 
 // Steps that take `problem` as their primary input.
 const PROBLEM_STEPS = new Set(['retrieval', 'rule', 'reasoning'])
-// Steps that take a draft/critique/improved instead — they don't need `problem`.
+// Steps that take a draft/critique/improved instead - they don't need `problem`.
 const DRAFT_STEPS = new Set(['critique', 'improvement', 'evaluation'])
 
 export async function POST(req: NextRequest) {
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { step, problem, decomposition, retrieval, priorDraft, priorCritique, draft, improved, critique, iteration, maxIterations, outputTypes, answers, providerConfig, threshold } = body as any
 
-    // Input validation — step-specific so critique/improvement/evaluation
+    // Input validation - step-specific so critique/improvement/evaluation
     // (which operate on a draft, not the original problem) don't fail with
     // "problem is required".
     if (!step || typeof step !== 'string') return NextResponse.json({ error: 'step is required' }, { status: 400 })

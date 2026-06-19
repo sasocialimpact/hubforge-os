@@ -1,4 +1,4 @@
-# HubForge OS — Knowledge Graph Schema Spec
+# HubForge OS - Knowledge Graph Schema Spec
 
 > The open format for domain packs. Anyone can build one.
 > Version: 1.0.0 | License: Apache-2.0
@@ -7,12 +7,12 @@
 
 A domain pack is a bundle of domain knowledge that grounds HubForge's 9-engine reasoning pipeline. The Social Impact Pack (M&E for NGOs) is the first. Others could include:
 
-- **Health Pack** — clinical guidelines, DHIS2 indicators, WHO frameworks
-- **Education Pack** — FLN frameworks, EGRA/EGMA assessments, school quality standards
-- **Climate Pack** — adaptation frameworks, IPCC evidence, vulnerability indices
-- **Humanitarian Pack** — Sphere standards, HPC frameworks, needs assessment
+- **Health Pack** - clinical guidelines, DHIS2 indicators, WHO frameworks
+- **Education Pack** - FLN frameworks, EGRA/EGMA assessments, school quality standards
+- **Climate Pack** - adaptation frameworks, IPCC evidence, vulnerability indices
+- **Humanitarian Pack** - Sphere standards, HPC frameworks, needs assessment
 
-A pack is a TypeScript/JavaScript module that exports a `DomainPack` object. It plugs directly into the kernel — no code changes needed.
+A pack is a TypeScript/JavaScript module that exports a `DomainPack` object. It plugs directly into the kernel - no code changes needed.
 
 ## The `DomainPack` Interface
 
@@ -134,16 +134,16 @@ Used for pack validation, regression testing, and demo data.
 
 ## How to Build a Pack
 
-1. **Create the module** — export a `DomainPack` object
-2. **Register it** — import in `engine-access.ts`
-3. **Test it** — `curl -X POST /api/v1/reason -d '{"problem":"...","pack":"health"}'`
-4. **Publish it** — commit to your repo, add to the HubForge Pack Registry (coming soon)
+1. **Create the module** - export a `DomainPack` object
+2. **Register it** - import in `engine-access.ts`
+3. **Test it** - `curl -X POST /api/v1/reason -d '{"problem":"...","pack":"health"}'`
+4. **Publish it** - commit to your repo, add to the HubForge Pack Registry (coming soon)
 
 ## Pack Discovery
 
-- `GET /api/v1/packs` — lists all installed packs
-- `GET /api/v1/knowledge` — returns the full knowledge graph for the default pack
-- `GET /api/v1/knowledge?pack=health` — returns the knowledge graph for a specific pack (coming soon)
+- `GET /api/v1/packs` - lists all installed packs
+- `GET /api/v1/knowledge` - returns the full knowledge graph for the default pack
+- `GET /api/v1/knowledge?pack=health` - returns the knowledge graph for a specific pack (coming soon)
 
 ## Versioning
 
@@ -151,6 +151,6 @@ Packs use semantic versioning: MAJOR (breaking), MINOR (new content, backward co
 
 ## The Vision
 
-When there are 50 domain packs — health, education, climate, humanitarian, agriculture, gender, governance, livelihoods, WASH, refugee response — HubForge becomes the connective tissue of the entire social sector. A consultant in Bangladesh builds a Climate Resilience Pack. An NGO in Kenya installs it. Their next climate program starts from the accumulated wisdom of every climate program that came before.
+When there are 50 domain packs - health, education, climate, humanitarian, agriculture, gender, governance, livelihoods, WASH, refugee response - HubForge becomes the connective tissue of the entire social sector. A consultant in Bangladesh builds a Climate Resilience Pack. An NGO in Kenya installs it. Their next climate program starts from the accumulated wisdom of every climate program that came before.
 
 **That's when HubForge is an operating system, not an app.**

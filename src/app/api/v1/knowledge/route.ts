@@ -1,4 +1,4 @@
-// GET /api/v1/knowledge — List the knowledge graph layers (frameworks, rules, evidence).
+// GET /api/v1/knowledge - List the knowledge graph layers (frameworks, rules, evidence).
 // This is the open data layer: third parties can query what HubForge knows.
 import { NextResponse } from 'next/server'
 import { socialImpactPack } from '@/lib/engine-access'

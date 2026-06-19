@@ -31,7 +31,7 @@ export default function Home() {
   // 'workspace' = general/geek mode builder
   // AUTH GATE: if not logged in, ALWAYS show landing. The app (dashboard +
   // workspace) is only accessible after signup/login. This is the standard
-  // SaaS pattern — you don't get to use the product without an account.
+  // SaaS pattern - you don't get to use the product without an account.
   const [view, setView] = useState<'landing' | 'dashboard' | 'workspace'>(() => {
     if (typeof window === 'undefined') return 'landing'
     // Not logged in → landing page, always.
@@ -137,7 +137,7 @@ export default function Home() {
         <>
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-          {/* Logo + name — clickable to return to dashboard */}
+          {/* Logo + name - clickable to return to dashboard */}
           <button onClick={() => setView('dashboard')} className="flex items-center gap-2.5">
             <img src="/hubforge-os-icon.png" alt="HubForge OS" className="h-8 w-8 rounded-lg" />
             <div className="text-left">
@@ -159,7 +159,7 @@ export default function Home() {
             <button
               onClick={() => setCommandCenterOpen(true)}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border text-[10px] font-mono text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-              title="Command center (Cmd+K) — Org, Data, Usage, Mode, Help, Admin"
+              title="Command center (Cmd+K) - Org, Data, Usage, Mode, Help, Admin"
             >
               <kbd>⌘</kbd><kbd>K</kbd>
               {orgSupabaseRev >= 0 && hasOrgSupabase() && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 ml-0.5" />}
@@ -229,7 +229,7 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Unified Command Center — replaces SettingsDialog + CommandPalette */}
+      {/* Unified Command Center - replaces SettingsDialog + CommandPalette */}
       <CommandCenter
         open={commandCenterOpen}
         onClose={() => setCommandCenterOpen(false)}
@@ -258,7 +258,7 @@ export default function Home() {
       )}
         </>
       )}
-      {/* Auth dialog — ALWAYS mounted, even on landing page, so "Launch App"
+      {/* Auth dialog - ALWAYS mounted, even on landing page, so "Launch App"
           can open signup before the user enters the app. */}
       <AuthDialog
         key={`${authMode}-${authOpen}`}

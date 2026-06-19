@@ -73,7 +73,7 @@ export function UsagePanel({ onOpenSettings }: UsagePanelProps = {}) {
             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
             <div className="min-w-0">
               <div className="text-xs font-medium">Unlimited strategies (your own key)</div>
-              <div className="text-[10px] text-muted-foreground">No daily cap — you are not using the shared Z.ai pool.</div>
+              <div className="text-[10px] text-muted-foreground">No daily cap - you are not using the shared Z.ai pool.</div>
             </div>
           </div>
         </Card>
@@ -104,8 +104,8 @@ export function UsagePanel({ onOpenSettings }: UsagePanelProps = {}) {
             {rl.loading
               ? 'Checking your allowance…'
               : rl.remaining > 0
-                ? `${rl.remaining} ${rl.remaining === 1 ? 'strategy' : 'strategies'} left today — shared Z.ai pool, resets daily.`
-                : 'Daily limit reached on the shared pool — resets at midnight.'}
+                ? `${rl.remaining} ${rl.remaining === 1 ? 'strategy' : 'strategies'} left today - shared Z.ai pool, resets daily.`
+                : 'Daily limit reached on the shared pool - resets at midnight.'}
           </p>
           {keyCta}
         </Card>

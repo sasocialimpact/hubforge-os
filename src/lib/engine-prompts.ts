@@ -1,4 +1,4 @@
-// Engine prompt metadata — browser-safe (no z-ai-web-dev-sdk import).
+// Engine prompt metadata - browser-safe (no z-ai-web-dev-sdk import).
 //
 // This file is extracted from engines.ts so that client components (like
 // geek-mode.tsx's PromptInspector) can import getEnginePrompt, ENGINE_IDS,

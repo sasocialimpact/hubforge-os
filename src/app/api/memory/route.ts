@@ -24,7 +24,7 @@ interface MemoryRecord {
 
 const memoryStore: MemoryRecord[] = []
 
-// Platform Supabase (env-supplied) — cached once per server instance.
+// Platform Supabase (env-supplied) - cached once per server instance.
 let platformClient: any = null
 let platformInitialized = false
 async function getPlatformClient() {

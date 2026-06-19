@@ -285,10 +285,10 @@ export function AuthDialog({ open, onOpenChange, initialMode = 'signup', onAuthC
                     <span className="text-xs font-bold">What we store (platform)</span>
                   </div>
                   <ul className="text-[11px] text-muted-foreground space-y-1 ml-6 list-disc">
-                    <li>Your <strong>email</strong> — to recognize you when you return</li>
-                    <li>A <strong>hashed password</strong> — never plaintext, never decryptable</li>
-                    <li>A <strong>consent record</strong> — what you agreed to, and when</li>
-                    <li><strong>Anonymous usage metadata</strong> — which features you use, how long (only if you opt in)</li>
+                    <li>Your <strong>email</strong> - to recognize you when you return</li>
+                    <li>A <strong>hashed password</strong> - never plaintext, never decryptable</li>
+                    <li>A <strong>consent record</strong> - what you agreed to, and when</li>
+                    <li><strong>Anonymous usage metadata</strong> - which features you use, how long (only if you opt in)</li>
                   </ul>
                 </div>
 
@@ -314,10 +314,10 @@ export function AuthDialog({ open, onOpenChange, initialMode = 'signup', onAuthC
                     <span className="text-xs font-bold">Your rights (GDPR / DPDP)</span>
                   </div>
                   <ul className="text-[11px] text-muted-foreground space-y-1 ml-6 list-disc">
-                    <li><strong>Right to access</strong> — export your account data anytime</li>
-                    <li><strong>Right to be forgotten</strong> — delete your account anytime</li>
-                    <li><strong>Right to opt out</strong> — disable analytics anytime</li>
-                    <li><strong>Data portability</strong> — your data is in your own Supabase, exportable as SQL</li>
+                    <li><strong>Right to access</strong> - export your account data anytime</li>
+                    <li><strong>Right to be forgotten</strong> - delete your account anytime</li>
+                    <li><strong>Right to opt out</strong> - disable analytics anytime</li>
+                    <li><strong>Data portability</strong> - your data is in your own Supabase, exportable as SQL</li>
                   </ul>
                 </div>
               </div>

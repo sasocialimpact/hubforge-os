@@ -1,4 +1,4 @@
-// HubForge OS — Identity & Auth
+// HubForge OS - Identity & Auth
 //
 // DESIGN PRINCIPLE: Data sovereignty split.
 //   - Platform stores: email + hashed password + userId + consent record.
@@ -9,8 +9,8 @@
 //     tracked against userId WITH consent. No program content, no names.
 //
 // STORAGE TIERS (same 3-tier fallback as the rest of HubForge):
-//   1. Platform Supabase (env vars) — real server-side auth, syncs across devices
-//   2. localStorage — device-only identity (works for trying it out,
+//   1. Platform Supabase (env vars) - real server-side auth, syncs across devices
+//   2. localStorage - device-only identity (works for trying it out,
 //      clearly labeled "this device only")
 //
 // CONSENT (GDPR / DPDP compliant):
@@ -23,7 +23,7 @@
 // PASSWORD HASHING:
 //   - PBKDF2 (Web Crypto) with 150,000 iterations of SHA-256, 16-byte salt,
 //     32-byte derived key. Stored as `pbkdf2$<iterations>$<saltHex>$<hashHex>`.
-//   - PBKDF2 is a slow KDF designed for passwords — much harder to brute
+//   - PBKDF2 is a slow KDF designed for passwords - much harder to brute
 //     force than a single SHA-256 pass. (Previous versions used plain
 //     SHA-256, which is fast and unsafe for password storage.)
 //   - The hash format includes the iteration count so it can be raised in
@@ -33,7 +33,7 @@ export interface Account {
   id: string               // userId (random, not the email)
   email: string            // login identifier
   name?: string            // display name (stored in user's DB, not platform)
-  passwordHash: string     // pbkdf2$<iter>$<saltHex>$<hashHex> — never store plaintext
+  passwordHash: string     // pbkdf2$<iter>$<saltHex>$<hashHex> - never store plaintext
   salt: string             // per-user salt (legacy field; also embedded in passwordHash for new accounts)
   createdAt: string
   lastSeen: string
@@ -64,7 +64,7 @@ const ACCOUNTS_KEY = 'hubforge.accounts'
 const SESSION_KEY = 'hubforge.session'
 
 // ───────────────────────────────────────────────────────────────────────────
-// Password hashing (PBKDF2 via Web Crypto API — no external deps)
+// Password hashing (PBKDF2 via Web Crypto API - no external deps)
 //
 // Storage format: `pbkdf2$<iterations>$<saltHex>$<hashHex>`
 //   - iterations: tunable work factor (raised over time)
@@ -75,7 +75,7 @@ const SESSION_KEY = 'hubforge.session'
 //   - Web Crypto ships PBKDF2 natively in every modern browser and Node
 //     runtime (no native module, no WASM payload, no extra dependency).
 //   - 150k iterations of SHA-256 puts each guess at ~50-100ms on commodity
-//     hardware — sufficient resistance for a low-stakes, serverless-friendly
+//     hardware - sufficient resistance for a low-stakes, serverless-friendly
 //     identity layer. If we ever need stronger protection, swap the algorithm
 //     and re-hash on next login (the iteration count is stored in the hash).
 // ───────────────────────────────────────────────────────────────────────────
@@ -132,7 +132,7 @@ async function verifyPassword(password: string, stored: string, legacySalt: stri
     const candidate = await derivePbkdf2(password, salt, iterations)
     // Constant-time-ish compare: XOR each byte. (crypto.subtle doesn't ship
     // a constant-time compare; we emulate by comparing equal-length hex
-    // strings after XOR — good enough for an offline attack scenario where
+    // strings after XOR - good enough for an offline attack scenario where
     // the attacker doesn't get timing feedback anyway.)
     if (candidate.length !== hashHex.length) return false
     let diff = 0
@@ -381,7 +381,7 @@ export function deleteAccount(): void {
   saveLocalAccounts(accounts)
   saveSession(null)
   // Note: programs, indicators, etc. in the user's own Supabase are NOT
-  // deleted by this — the user controls their own database. We only delete
+  // deleted by this - the user controls their own database. We only delete
   // the platform identity.
 }
 
