@@ -20,16 +20,44 @@ export interface WebSearchResult {
   summary: string
 }
 
-let zaiInstance: any = null
-async function getZAI() {
-  if (!zaiInstance) zaiInstance = await ZAI.create()
-  return zaiInstance
+// Z.ai config - same pattern as engines.ts (env vars first, SDK fallback)
+let zaiConfig: { baseUrl: string; apiKey: string } | null = null
+async function getZAIConfig(): Promise<{ baseUrl: string; apiKey: string }> {
+  if (zaiConfig) return zaiConfig
+  const envBaseUrl = process.env.ZAI_BASE_URL
+  const envApiKey = process.env.ZAI_API_KEY
+  if (envBaseUrl && envApiKey) {
+    zaiConfig = { baseUrl: envBaseUrl, apiKey: envApiKey }
+    return zaiConfig
+  }
+  try {
+    const zai = await ZAI.create()
+    const config = (zai as any).config || {}
+    zaiConfig = {
+      baseUrl: config.baseUrl || 'https://internal-api.z.ai/v1',
+      apiKey: config.apiKey || '',
+    }
+    return zaiConfig
+  } catch {
+    throw new Error('Z.ai not configured for web search')
+  }
 }
 
 async function search(query: string, num = 5): Promise<SearchResult[]> {
   try {
-    const zai = await getZAI()
-    const results = await zai.functions.invoke('web_search', { query, num })
+    const { baseUrl, apiKey } = await getZAIConfig()
+    // Call the Z.ai web_search function directly
+    const res = await fetch(`${baseUrl}/functions/web_search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'X-Z-AI-From': 'Z',
+      },
+      body: JSON.stringify({ query, num }),
+    })
+    if (!res.ok) return []
+    const results = await res.json()
     if (!Array.isArray(results)) return []
     return results.slice(0, num).map((r: any) => ({
       title: r.name || '',

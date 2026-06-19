@@ -68,13 +68,37 @@ export function describeProvider(config?: ProviderConfig): string {
   return `${PROVIDER_LABELS[c.provider]} · ${c.model} @ ${c.baseUrl}`
 }
 
-let zaiInstance: any = null
-async function getZAI() {
-  if (!zaiInstance) zaiInstance = await ZAI.create()
-  return zaiInstance
+// Z.ai shared key config - read from env vars (set in Vercel) or fall back
+// to the sandbox's /etc/.z-ai-config file (for local dev in this sandbox).
+// On Vercel, set these env vars:
+//   ZAI_BASE_URL=https://internal-api.z.ai/v1
+//   ZAI_API_KEY=your-shared-key
+let zaiConfig: { baseUrl: string; apiKey: string } | null = null
+async function getZAIConfig(): Promise<{ baseUrl: string; apiKey: string }> {
+  if (zaiConfig) return zaiConfig
+  // Try env vars first (works on Vercel + any host)
+  const envBaseUrl = process.env.ZAI_BASE_URL
+  const envApiKey = process.env.ZAI_API_KEY
+  if (envBaseUrl && envApiKey) {
+    zaiConfig = { baseUrl: envBaseUrl, apiKey: envApiKey }
+    return zaiConfig
+  }
+  // Fall back to the ZAI SDK's config file (works in this sandbox)
+  try {
+    const zai = await ZAI.create()
+    // Extract the config from the SDK instance
+    const config = (zai as any).config || {}
+    zaiConfig = {
+      baseUrl: config.baseUrl || 'https://internal-api.z.ai/v1',
+      apiKey: config.apiKey || '',
+    }
+    return zaiConfig
+  } catch {
+    throw new Error('Z.ai shared key not configured. Set ZAI_BASE_URL and ZAI_API_KEY env vars.')
+  }
 }
 
-// The single LLM entry point. Routes to Z.ai SDK or an OpenAI-compatible fetch.
+// The single LLM entry point. Routes to Z.ai (shared) or an OpenAI-compatible fetch.
 //
 // Rate limiting + retry:
 //   - Shared 'zai' provider: wrapped with withSharedSlot (sliding-window queue)
@@ -90,15 +114,30 @@ export async function llm(config: ProviderConfig, systemPrompt: string, userProm
     // Shared key - wrap with rate-limit queue + retry.
     const { withSharedSlot, withRetry } = await import('./server/llm-rate-limit')
     return withSharedSlot(() => withRetry(async () => {
-      const zai = await getZAI()
-      const completion = await zai.chat.completions.create({
-        messages: [
-          { role: 'assistant', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        thinking: { type: 'disabled' },
+      const { baseUrl, apiKey } = await getZAIConfig()
+      // Call the Z.ai API directly (same as the SDK does, but without
+      // requiring the .z-ai-config file - works on Vercel).
+      const res = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'X-Z-AI-From': 'Z',
+        },
+        body: JSON.stringify({
+          messages: [
+            { role: 'assistant', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          thinking: { type: 'disabled' },
+        }),
       })
-      return completion.choices[0]?.message?.content ?? ''
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        throw new Error(`Z.ai shared key returned ${res.status}: ${txt.slice(0, 300)}`)
+      }
+      const data = await res.json()
+      return data?.choices?.[0]?.message?.content ?? ''
     }))
   }
   // User's own key - retry only, no shared queue.
