@@ -51,4 +51,16 @@ prompt
 
 server.log
 # Skills directory
-/skills/
+/skills/.env
+worklog.md
+plan.md
+AUDIT-REPORT.md
+tool-results/
+*.vision.md
+FREE-TIER-VISION.md
+FUTURISTIC-VISION.md
+INNOVATION-FEATURES.md
+MEL-LIFECYCLE-VISION.md
+PRODUCT-GAP-ANALYSIS.md
+UI-FIX-PLAN.md
+UX-REDESIGN.md
