@@ -21,7 +21,7 @@ import { EnginePipeline, type EngineState, type EngineStatus } from '@/component
 import { ENGINE_DEFS, type EngineId, type TimelineEvent } from '@/lib/types'
 import { socialImpactPackMeta, EXAMPLE_PROBLEMS } from '@/lib/social-impact-pack'
 import { socialImpactPack } from '@/lib/knowledge'
-import { getEnginePrompt, ENGINE_IDS, type EnginePromptInfo } from '@/lib/engines'
+import { getEnginePrompt, ENGINE_IDS, type EnginePromptInfo } from '@/lib/engine-prompts'
 import { PROVIDERS, type ProviderConfig, type ProviderId, getStoredProviderConfig } from '@/lib/providers'
 import { cn } from '@/lib/utils'
 import {
