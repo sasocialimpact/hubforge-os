@@ -145,8 +145,8 @@ export function DataStorageDialog({ open, onOpenChange, onSaved }: DataStorageDi
               className="font-mono text-sm"
             />
             <p className="text-[10px] text-muted-foreground">
-              Found in Supabase Dashboard -> Settings -> API -> anon public key.
-              This is safe to use in the browser (it's designed to be public with RLS).
+              Found in Supabase Dashboard {">"} Settings {">"} API {">"} anon public key.
+              This is safe to use in the browser (designed to be public with RLS).
             </p>
           </div>
 
