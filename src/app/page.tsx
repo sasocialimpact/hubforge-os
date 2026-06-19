@@ -1,11 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { BrainCircuit, Sparkles, Layers, Settings, Building2, LayoutGrid, Zap, Terminal, Wand2, Database } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { Settings, LayoutGrid } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { socialImpactPackMeta } from '@/lib/social-impact-pack'
 import { GeneralMode } from '@/components/general-mode'
 import { GeekMode } from '@/components/geek-mode'
 import { LandingPage } from '@/components/landing-page'
@@ -102,66 +100,35 @@ export default function Home() {
         <>
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="relative h-9 w-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md">
-              <BrainCircuit className="h-5 w-5 text-white" />
-            </div>
-            <div>
+          {/* Logo + name — clickable to return to dashboard */}
+          <button onClick={() => setView('dashboard')} className="flex items-center gap-2.5">
+            <img src="/hubforge-os-icon.png" alt="HubForge OS" className="h-8 w-8 rounded-lg" />
+            <div className="text-left">
               <div className="font-bold text-base leading-tight tracking-tight">HubForge OS</div>
-              <div className="text-[10px] font-mono text-muted-foreground leading-tight">social impact pack</div>
+              <div className="text-[10px] font-mono text-muted-foreground leading-tight">M&amp;E operating system</div>
             </div>
-          </div>
+          </button>
 
+          {/* Jobs discipline: 3 buttons. Everything else lives in Cmd+K. */}
           <div className="ml-auto flex items-center gap-2">
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setView(view === 'dashboard' ? 'workspace' : 'dashboard')}>
               <LayoutGrid className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{view === 'dashboard' ? 'Workspace' : 'Programs'}</span>
             </Button>
-            <a href="/organization">
-              <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2">
-                <Building2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Org</span>
-              </Button>
-            </a>
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setDataStorageOpen(true)}>
-              <Database className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Data</span>
-              {/* orgSupabaseRev is read here so React re-renders on save/disconnect */}
-              {orgSupabaseRev >= 0 && hasOrgSupabase() && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
-            </Button>
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setUsageOpen(true)}>
-              <Zap className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Usage</span>
-            </Button>
-            <Badge variant="outline" className="hidden md:inline-flex gap-1 font-mono text-[10px]">
-              <Layers className="h-3 w-3" /> v0.2
-            </Badge>
-            <Badge className="gap-1 bg-amber-600 hover:bg-amber-600 text-white">
-              <Sparkles className="h-3 w-3" /> {socialImpactPackMeta.name}
-            </Badge>
-            {/* General / Geek mode toggle - General is default for everyone, Geek for power users */}
-            {view === 'workspace' && (
-              <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => handleModeSwitch(mode === 'general' ? 'geek' : 'general')}>
-                {mode === 'general' ? <><Terminal className="h-3.5 w-3.5" /><span className="hidden sm:inline">Geek</span></> : <><Wand2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">General</span></>}
-              </Button>
-            )}
-            {/* Settings button now opens the unified CommandCenter (same as Cmd+K) */}
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={openCommandCenter}>
               <Settings className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Settings</span>
             </Button>
-            {/* Command center trigger — same panel as Settings */}
             <button
               onClick={() => setCommandCenterOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md border border-border text-[10px] font-mono text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-              title="Command center (Cmd+K)"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border text-[10px] font-mono text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+              title="Command center (Cmd+K) — Org, Data, Usage, Mode, Help, Admin"
             >
-              <kbd>Cmd</kbd> <kbd>K</kbd>
+              <kbd>⌘</kbd><kbd>K</kbd>
+              {orgSupabaseRev >= 0 && hasOrgSupabase() && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 ml-0.5" />}
             </button>
-            <ConnectionPill connected={connected} />
           </div>
         </div>
-
       </header>
 
       <main className="flex-1">
