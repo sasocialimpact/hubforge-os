@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { BrainCircuit, Sparkles, Layers, Settings, Terminal, Wand2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { GeekMode } from '@/components/geek-mode'
 import { SettingsDialog } from '@/components/settings-dialog'
 import { InstallPrompt } from '@/components/install-prompt'
 import { FirstRunOnboarding, useShouldOnboard } from '@/components/onboarding'
+import { CommandPalette, useCommandPalette } from '@/components/command-palette'
 import { getStoredProviderConfig, type ProviderConfig } from '@/lib/providers'
 import { analytics } from '@/lib/analytics'
 
@@ -22,10 +23,14 @@ export default function Home() {
   const [providerConfig, setProviderConfig] = useState<ProviderConfig>(() => getStoredProviderConfig())
   const shouldOnboard = useShouldOnboard()
   const [onboardingDone, setOnboardingDone] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
   const connected = true
 
   useEffect(() => { analytics.appOpen() }, [])
+
+  // Register Cmd+K / Ctrl+K
+  useCommandPalette(useCallback(() => setCommandPaletteOpen(true), []))
 
   const handleModeSwitch = (newMode: Mode) => {
     setMode(newMode)
@@ -80,7 +85,7 @@ export default function Home() {
 
           <div className="ml-auto flex items-center gap-2">
             <Badge variant="outline" className="hidden md:inline-flex gap-1 font-mono text-[10px]">
-              <Layers className="h-3 w-3" /> v0.2 · Apache-2.0
+              <Layers className="h-3 w-3" /> v0.2
             </Badge>
             <Badge className="gap-1 bg-amber-600 hover:bg-amber-600 text-white">
               <Sparkles className="h-3 w-3" /> {socialImpactPackMeta.name}
@@ -89,6 +94,14 @@ export default function Home() {
               <Settings className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Settings</span>
             </Button>
+            {/* Command palette trigger */}
+            <button
+              onClick={() => setCommandPaletteOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md border border-border text-[10px] font-mono text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+              title="Command palette (Cmd+K)"
+            >
+              <kbd>Cmd</kbd> <kbd>K</kbd>
+            </button>
             <ConnectionPill connected={connected} />
           </div>
         </div>
@@ -104,8 +117,6 @@ export default function Home() {
       </header>
 
       <main className="flex-1">
-        {/* Keep both modes mounted to preserve state when switching.
-            Hide the inactive one with CSS instead of unmounting. */}
         <div className={cn(mode === 'general' ? 'block' : 'hidden')}>
           <GeneralMode connected={connected} providerConfig={providerConfig} />
         </div>
@@ -120,7 +131,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[11px] font-mono text-muted-foreground">
           <div className="flex items-center gap-2">
             <BrainCircuit className="h-3.5 w-3.5 text-amber-600" />
-            <span>HubForge OS · open-source decision intelligence infrastructure</span>
+            <span>HubForge OS - open-source decision intelligence infrastructure</span>
           </div>
           <div className="flex items-center gap-4">
             <a href="/help" className="hover:text-amber-700 dark:hover:text-amber-400">Help</a>
@@ -137,6 +148,12 @@ export default function Home() {
       {shouldOnboard && !onboardingDone && (
         <FirstRunOnboarding onComplete={handleOnboardingComplete} />
       )}
+      <CommandPalette
+        open={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        onSwitchMode={handleModeSwitch}
+        onOpenSettings={() => handleSettingsOpen(true)}
+      />
     </div>
   )
 }
