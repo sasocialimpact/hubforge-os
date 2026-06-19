@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { BrainCircuit, Sparkles, Layers, Settings, Building2, LayoutGrid, Zap, Terminal, Wand2 } from 'lucide-react'
+import { BrainCircuit, Sparkles, Layers, Settings, Building2, LayoutGrid, Zap, Terminal, Wand2, Database } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,7 @@ import { socialImpactPackMeta } from '@/lib/social-impact-pack'
 import { GeneralMode } from '@/components/general-mode'
 import { GeekMode } from '@/components/geek-mode'
 import { SettingsDialog } from '@/components/settings-dialog'
+import { DataStorageDialog } from '@/components/data-storage-dialog'
 import { ProgramDashboard } from '@/components/program-dashboard'
 import { UsagePanel } from '@/components/usage-panel'
 import { InstallPrompt } from '@/components/install-prompt'
@@ -16,6 +17,7 @@ import { FirstRunOnboarding, useShouldOnboard } from '@/components/onboarding'
 import { CommandPalette, useCommandPalette } from '@/components/command-palette'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getStoredProviderConfig, type ProviderConfig } from '@/lib/providers'
+import { hasOrgSupabase } from '@/lib/org-supabase'
 import { analytics } from '@/lib/analytics'
 
 type Mode = 'general' | 'geek'
@@ -24,6 +26,7 @@ export default function Home() {
   const [mode, setMode] = useState<Mode>('general')
   const [view, setView] = useState<'dashboard' | 'workspace'>('dashboard')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [dataStorageOpen, setDataStorageOpen] = useState(false)
   const [usageOpen, setUsageOpen] = useState(false)
   const [providerConfig, setProviderConfig] = useState<ProviderConfig>(() => getStoredProviderConfig())
   const shouldOnboard = useShouldOnboard()
@@ -86,6 +89,11 @@ export default function Home() {
                 <span className="hidden sm:inline">Org</span>
               </Button>
             </a>
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setDataStorageOpen(true)}>
+              <Database className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Data</span>
+              {hasOrgSupabase() && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+            </Button>
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setUsageOpen(true)}>
               <Zap className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Usage</span>
@@ -158,6 +166,7 @@ export default function Home() {
       </footer>
 
       <SettingsDialog open={settingsOpen} onOpenChange={handleSettingsOpen} onSaved={handleProviderSaved} />
+      <DataStorageDialog open={dataStorageOpen} onOpenChange={setDataStorageOpen} />
       <Dialog open={usageOpen} onOpenChange={setUsageOpen}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
