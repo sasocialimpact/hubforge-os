@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { socialImpactPackMeta } from '@/lib/social-impact-pack'
 import { GeneralMode } from '@/components/general-mode'
 import { GeekMode } from '@/components/geek-mode'
+import { LandingPage } from '@/components/landing-page'
 import { DataStorageDialog } from '@/components/data-storage-dialog'
 import { ProgramDashboard } from '@/components/program-dashboard'
 import { UsagePanel } from '@/components/usage-panel'
@@ -24,7 +25,14 @@ type Mode = 'general' | 'geek'
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>('general')
-  const [view, setView] = useState<'dashboard' | 'workspace'>('dashboard')
+  // 'landing' = marketing landing page (default for first visit)
+  // 'dashboard' = saved programs grid
+  // 'workspace' = general/geek mode builder
+  const [view, setView] = useState<'landing' | 'dashboard' | 'workspace'>(() => {
+    if (typeof window === 'undefined') return 'landing'
+    // Returning users skip the landing page. First-time visitors see it.
+    return localStorage.getItem('hubforge.landingSeen') ? 'dashboard' : 'landing'
+  })
   // CommandCenter replaces both SettingsDialog and CommandPalette.
   // Opens via Cmd+K OR the Settings button.
   const [commandCenterOpen, setCommandCenterOpen] = useState(false)
@@ -65,6 +73,12 @@ export default function Home() {
     analytics.settingsOpened()
   }
 
+  // Launch from the landing page → mark as seen, go to dashboard.
+  const handleLaunch = () => {
+    try { localStorage.setItem('hubforge.landingSeen', '1') } catch {}
+    setView('dashboard')
+  }
+
   const handleProviderSaved = (newConfig: ProviderConfig) => {
     setProviderConfig(newConfig)
     analytics.providerChanged({ from: providerConfig.provider, to: newConfig.provider })
@@ -81,6 +95,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100">
+      {/* ── Landing page (full-screen, no app header) ── */}
+      {view === 'landing' ? (
+        <LandingPage onLaunch={handleLaunch} />
+      ) : (
+        <>
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
           <div className="flex items-center gap-2.5">
@@ -209,6 +228,8 @@ export default function Home() {
       <InstallPrompt />
       {shouldOnboard && !onboardingDone && (
         <FirstRunOnboarding onComplete={handleOnboardingComplete} />
+      )}
+        </>
       )}
     </div>
   )

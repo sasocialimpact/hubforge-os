@@ -428,3 +428,46 @@ Stage Summary:
 - Provider switching, API key entry, model/URL config all happen inline — no separate dialog.
 - The old SettingsDialog component is no longer imported (kept on disk for reference but unused).
 - Files modified: src/components/command-palette.tsx (rewritten as CommandCenter), src/app/page.tsx (updated to use CommandCenter instead of SettingsDialog + CommandPalette).
+
+---
+Task ID: 12
+Agent: main (Z.ai Code)
+Task: Create a landing page for HubForge OS with the tagline "Operating system for Monitoring, Evaluation, Research & Learning" and design a matching OS icon.
+
+Work Log:
+- Analyzed the uploaded logo (logo.png) using VLM: geometric "H" (black) + "F" (red) letters with colorful accent blocks (yellow square, green rectangle, pink square) and purple "HUBFORGE." text. Modern, minimalist, geometric style.
+- Generated OS icon using z-ai image generation CLI: "Modern app icon for HubForge OS operating system. Geometric minimalist design featuring bold black letter H and red letter F formed from building blocks, with small yellow square, green rectangle, and pink square accents..." Saved to public/hubforge-os-icon.png (1024x1024). VLM confirmed: "clean and professional, works as a small icon, distinct letters and colors remain recognizable at reduced sizes."
+- Copied original logo to public/hubforge-logo.png for reference.
+- Created src/components/landing-page.tsx — a full marketing landing page with:
+  • Fixed nav bar with logo, version badge, section links (Features, Pipeline, How it works), and Launch App button
+  • Hero section: large icon, "Open-source · Apache-2.0 · Free forever" badge, "HubForge OS" title, "The operating system for" + gradient-highlighted "Monitoring, Evaluation, Research & Learning" tagline, description, 2 CTAs (Launch + See how it works), 4 stats (9 AI Engines, 7 AI Providers, 6 M&E Frameworks, $0 Monthly Cost)
+  • Pipeline section (#pipeline): "9-Engine Recursive Reasoning" with horizontal visualization of all 9 numbered steps (Supervisor → Structure) with descriptions
+  • Features section (#features): 6 feature cards in a 3-column grid (9-Engine AI Pipeline, Theory of Change, Logframes & Strategies, Evaluation Plans, Your Data Your Database, 7 AI Providers) — each with colored icon, title, description
+  • How it works section (#how): 4-step workflow (Describe problem → Answer questions → Watch engines run → Get deliverables)
+  • Data ownership callout: amber gradient card with Database icon, "Your data stays in your database" headline, 4 checkmarks
+  • Final CTA: icon + "Ready to build your first program?" + Launch button
+  • Footer: logo + "Apache-2.0 · Built for NGOs" + links
+  - Framer Motion animations throughout (fade-in, slide-up, staggered)
+  - Background blur accents (amber, rose, emerald)
+- Updated src/app/page.tsx:
+  • Added 'landing' to the view state union ('landing' | 'dashboard' | 'workspace')
+  • Lazy-init view from localStorage: first-time visitors see 'landing', returning users (hubforge.landingSeen flag) skip to 'dashboard'
+  • Added handleLaunch() that sets the localStorage flag and switches to 'dashboard'
+  • Wrapped the app shell (header + main + footer + dialogs) in a conditional: landing page renders full-screen when view === 'landing', app shell renders otherwise
+  • LandingPage component receives onLaunch={handleLaunch}
+- Lint passes clean (0 errors).
+- Verified with Agent Browser + VLM:
+  • Landing page loads with hero section: icon, title "HubForge OS", tagline "The operating system for Monitoring, Evaluation, Research & Learning" (gradient highlight), description, 2 CTA buttons, 4 stats. VLM confirmed all elements. ✅
+  • Clicked "Launch HubForge OS" button → successfully transitioned to the app dashboard (app header visible with Workspace, Org, Data, Settings). localStorage flag set so returning users skip landing. ✅
+  • Scrolled to features section: 6 feature cards visible (9-Engine AI Pipeline, Theory of Change, Logframes & Strategies, etc.) in a clean grid. VLM confirmed. ✅
+  • Pipeline section: 9 numbered steps with engine names (Supervisor through Structure). VLM confirmed. ✅
+  • Design: VLM confirmed "clean and modern, minimalist layout, balanced sections, cohesive branding, polished and user-friendly". ✅
+
+Stage Summary:
+- Created a polished marketing landing page for HubForge OS with the tagline "Operating system for Monitoring, Evaluation, Research & Learning".
+- Generated a matching OS icon (public/hubforge-os-icon.png) using AI image generation — geometric H+F motif with colorful accent blocks, matching the original logo's style.
+- Landing page shows by default for first-time visitors; returning users skip to the dashboard. Both can access the app via the "Launch HubForge OS" button.
+- Landing page sections: hero (icon + title + tagline + stats), 9-engine pipeline visualization, 6 feature cards, 4-step workflow, data ownership callout, final CTA, footer.
+- Files created: src/components/landing-page.tsx, public/hubforge-os-icon.png, public/hubforge-logo.png (copy of original).
+- Files modified: src/app/page.tsx (added 'landing' view, handleLaunch, conditional rendering).
+- Lint clean, browser-verified, VLM-confirmed.
