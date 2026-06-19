@@ -330,7 +330,9 @@ export async function reasoningEngine(
   maxIterations: number,
   outputTypes: OutputType[],
   answers?: Record<string, string>,
-  webSearch?: { demographic: any[]; previousPrograms: any[]; evidence: any[]; summary: string } | null
+  webSearch?: { demographic: any[]; previousPrograms: any[]; evidence: any[]; summary: string } | null,
+  orgContext?: string | null,
+  contextBlocks?: string | null,
 ): Promise<string> {
   const frameworksText = (retrieval.frameworks || [])
     .map((f: any) => `### ${f.name}\n${f.description || ''}\nWhen to use: ${f.whenToUse || ''}\nKey elements: ${(f.keyElements || []).join(', ')}${f.template ? `\nTemplate: ${f.template}` : ''}`)
@@ -381,6 +383,8 @@ REQUIREMENTS:
   const user = `# PROBLEM
 ${problem}${answersBlock}
 ${outputGuidance}
+${orgContext || ''}
+${contextBlocks || ''}
 ${webSearchBlock}
 
 # DECOMPOSITION (from Supervisor Engine)

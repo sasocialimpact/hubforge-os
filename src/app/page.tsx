@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { BrainCircuit, Sparkles, Layers, Settings, Terminal, Wand2 } from 'lucide-react'
+import { BrainCircuit, Sparkles, Layers, Settings, Terminal, Wand2, Building2, LayoutGrid } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,8 @@ import { socialImpactPackMeta } from '@/lib/social-impact-pack'
 import { GeneralMode } from '@/components/general-mode'
 import { GeekMode } from '@/components/geek-mode'
 import { SettingsDialog } from '@/components/settings-dialog'
+import { OrgSettings } from '@/components/org-settings'
+import { ProgramDashboard } from '@/components/program-dashboard'
 import { InstallPrompt } from '@/components/install-prompt'
 import { FirstRunOnboarding, useShouldOnboard } from '@/components/onboarding'
 import { CommandPalette, useCommandPalette } from '@/components/command-palette'
@@ -19,7 +21,9 @@ type Mode = 'general' | 'geek'
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>('general')
+  const [view, setView] = useState<'dashboard' | 'workspace'>('workspace')
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [orgOpen, setOrgOpen] = useState(false)
   const [providerConfig, setProviderConfig] = useState<ProviderConfig>(() => getStoredProviderConfig())
   const shouldOnboard = useShouldOnboard()
   const [onboardingDone, setOnboardingDone] = useState(false)
@@ -84,6 +88,14 @@ export default function Home() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setView(view === 'dashboard' ? 'workspace' : 'dashboard')}>
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{view === 'dashboard' ? 'Workspace' : 'Programs'}</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setOrgOpen(true)}>
+              <Building2 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Org</span>
+            </Button>
             <Badge variant="outline" className="hidden md:inline-flex gap-1 font-mono text-[10px]">
               <Layers className="h-3 w-3" /> v0.2
             </Badge>
@@ -117,14 +129,23 @@ export default function Home() {
       </header>
 
       <main className="flex-1">
-        <div className={cn(mode === 'general' ? 'block' : 'hidden')}>
-          <GeneralMode connected={connected} providerConfig={providerConfig} />
-        </div>
-        <div className={cn(mode === 'geek' ? 'block' : 'hidden')}>
-          <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
-            <GeekMode connected={connected} providerConfig={providerConfig} />
-          </div>
-        </div>
+        {view === 'dashboard' ? (
+          <ProgramDashboard
+            onNewProgram={() => { setView('workspace'); setMode('general') }}
+            onOpenProgram={() => { setView('workspace') }}
+          />
+        ) : (
+          <>
+            <div className={cn(mode === 'general' ? 'block' : 'hidden')}>
+              <GeneralMode connected={connected} providerConfig={providerConfig} />
+            </div>
+            <div className={cn(mode === 'geek' ? 'block' : 'hidden')}>
+              <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
+                <GeekMode connected={connected} providerConfig={providerConfig} />
+              </div>
+            </div>
+          </>
+        )}
       </main>
 
       <footer className="border-t border-border bg-background mt-auto">
@@ -144,6 +165,7 @@ export default function Home() {
       </footer>
 
       <SettingsDialog open={settingsOpen} onOpenChange={handleSettingsOpen} onSaved={handleProviderSaved} />
+      <OrgSettings open={orgOpen} onOpenChange={setOrgOpen} />
       <InstallPrompt />
       {shouldOnboard && !onboardingDone && (
         <FirstRunOnboarding onComplete={handleOnboardingComplete} />
@@ -153,6 +175,7 @@ export default function Home() {
         onClose={() => setCommandPaletteOpen(false)}
         onSwitchMode={handleModeSwitch}
         onOpenSettings={() => handleSettingsOpen(true)}
+        onNewProgram={() => { setView('workspace'); setMode('general') }}
       />
     </div>
   )

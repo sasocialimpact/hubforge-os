@@ -16,7 +16,7 @@ export async function callRetrieval(problem: string, decomposition: Decompositio
 export async function callRuleChecks(problem: string): Promise<any> {
   return apiCall('/api/run-step', { step: 'rule', problem })
 }
-export async function callReasoning(params: { problem: string; decomposition: Decomposition; retrieval: any; priorCritique: string | null; priorDraft: string | null; iteration: number; maxIterations: number; outputTypes: OutputType[]; answers: Record<string, string>; providerConfig: ProviderConfig }): Promise<string> {
+export async function callReasoning(params: { problem: string; decomposition: Decomposition; retrieval: any; priorCritique: string | null; priorDraft: string | null; iteration: number; maxIterations: number; outputTypes: OutputType[]; answers: Record<string, string>; providerConfig: ProviderConfig; orgContext?: string; contextBlocks?: string }): Promise<string> {
   const r = await apiCall('/api/run-step', { ...params, step: 'reasoning' }); return r.output
 }
 export async function callCritique(draft: string, providerConfig: ProviderConfig): Promise<any> {

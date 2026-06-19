@@ -25,6 +25,7 @@ import {
   getMemory, clearMemory, saveMemory,
 } from '@/lib/api-client'
 import { analytics, setAnalyticsSession } from '@/lib/analytics'
+import { getOrgProfile, getOrgContextBlock } from '@/lib/organization'
 import { socialImpactPackMeta, EXAMPLE_PROBLEMS } from '@/lib/social-impact-pack'
 import { cn } from '@/lib/utils'
 
@@ -112,6 +113,7 @@ export function GeneralMode({ connected, providerConfig }: { connected: boolean;
           priorCritique: priorCritiqueText, priorDraft,
           iteration: iter, maxIterations: MAX_ITERATIONS,
           outputTypes: outs, answers: answerMap, providerConfig: config,
+          orgContext: getOrgContextBlock(getOrgProfile()),
         })
 
         setProgressMsg('Reviewing the logic…')

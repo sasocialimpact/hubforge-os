@@ -32,7 +32,9 @@ export async function POST(req: NextRequest) {
       }
       case 'reasoning': {
         const webSearch = body.webSearch // optional web search results
-        const result = await reasoningEngine(config, problem, decomposition, retrieval, priorCritique, priorDraft, socialImpactPack, iteration, maxIterations, outputTypes, answers, webSearch)
+        const orgContext = body.orgContext // optional organization context string
+        const contextBlocks = body.contextBlocks // optional context blocks string
+        const result = await reasoningEngine(config, problem, decomposition, retrieval, priorCritique, priorDraft, socialImpactPack, iteration, maxIterations, outputTypes, answers, webSearch, orgContext, contextBlocks)
         return NextResponse.json({ output: result })
       }
       case 'critique': {
