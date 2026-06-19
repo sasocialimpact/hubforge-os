@@ -471,3 +471,101 @@ Stage Summary:
 - Files created: src/components/landing-page.tsx, public/hubforge-os-icon.png, public/hubforge-logo.png (copy of original).
 - Files modified: src/app/page.tsx (added 'landing' view, handleLaunch, conditional rendering).
 - Lint clean, browser-verified, VLM-confirmed.
+
+---
+Task ID: 13
+Agent: main (Z.ai Code)
+Task: Build the Monitoring Tracker — the bridge from planning tool to operating system. Strategies don't die at submission; indicators get tracked over time, RAG status shows progress, lessons compound.
+
+Work Log:
+- Created src/lib/monitoring.ts — full data model:
+  • Indicator interface (id, programId, title, level, baseline, target, current, unit, direction, frequency, mov, readings[])
+  • Reading interface (value, date, note, source)
+  • RAGStatus = green/amber/red/gray (computed from progress: ≥80% green, ≥50% amber, <50% red, no readings gray)
+  • CRUD: getIndicators, getIndicator, saveIndicator, deleteIndicator, createIndicator
+  • Readings: addReading, deleteReading (auto-sorts by date, recomputes current)
+  • RAG computation: computeProgress, computeRAG, computeNextDue (from frequency + last reading)
+  • deriveFromLogframe: auto-creates indicators from logframe OVIs (goal, purpose, outputs)
+  • getMonitoringSummary: total/green/amber/red/gray counts, avgProgress, readingsThisQuarter, nextActionsDue
+  • Supabase sync: fire-and-forget syncIndicatorToSupabase/deleteIndicatorFromSupabase
+- Created src/lib/monitoring-sync.ts — browser-side Supabase sync (same pattern as org-supabase-sync.ts): upsert/delete/pull indicators with JSONB readings array
+- Updated src/lib/org-supabase.ts SQL setup script: added `indicators` table (indicator_id, program_id, title, level, baseline, target, current, unit, direction, frequency, mov, readings JSONB) + index on program_id + RLS policy
+- Created src/components/monitoring-tracker.tsx — full UI:
+  • Summary header: 5 cards (total indicators, avg progress, green/amber/red counts)
+  • Action bar: "Add indicator" + "Derive from logframe" + "N due soon" badge
+  • Empty state: friendly CTA with both options
+  • IndicatorCard: RAG dot, title, level badge, MoV, progress bar, current/target, expandable to show readings history + add reading form
+  • AddIndicatorForm: title, level, baseline, target, unit, direction (increase/decrease), frequency, MoV
+  • Add reading inline: value, date, note → instantly updates RAG + progress
+  • Readings history: scrollable list with delete per reading
+  • Next due date computed from frequency
+- Wired into src/components/program-dashboard.tsx:
+  • Added monitoringProgramId state
+  • Added "Monitor" button to each program card (amber, with Activity icon)
+  • When clicked, shows the MonitoringTracker full-screen with "Back to programs" button
+  • Passes the program's logframe to the tracker so "Derive from logframe" works
+- Lint passes clean (0 errors).
+- Verified end-to-end with Agent Browser:
+  • Created test program with logframe (goal: "500 children reading at grade level", purpose: "75% pass rate on EGRA", outputs: "150 teachers trained", "3000 reading books distributed")
+  • Clicked "Monitor" → monitoring tracker opened with empty state
+  • Clicked "Derive from logframe" → 4 indicators auto-created from OVIs, all showing "0% No data" (gray RAG)
+  • Verified 4 indicators persisted in localStorage: "3000 reading books distributed", "150 teachers trained in FLN methods", "75% pass rate on EGRA", "500 children reading at grade level"
+  • VLM confirmed: heading with program name + "Monitoring & indicators", indicator cards with RAG colored dots, Add indicator + Derive from logframe buttons, clean layout
+
+Stage Summary:
+- MONITORING TRACKER SHIPPED. This is the bridge from planning tool to operating system.
+- Strategies no longer die at submission. Indicators (auto-derived from logframe OVIs or added manually) get tracked over time with timestamped readings.
+- RAG status (Red/Amber/Green) shows progress at a glance. Progress bars show current vs target.
+- Readings are timestamped values with notes (e.g. "Q3 survey: 120 teachers trained"). Adding a reading instantly recomputes RAG + progress.
+- Next due dates computed from frequency (monthly/quarterly/annually).
+- Supabase sync ready (indicators table in SQL setup script, browser-side sync module).
+- Files created: src/lib/monitoring.ts, src/lib/monitoring-sync.ts, src/components/monitoring-tracker.tsx
+- Files modified: src/lib/org-supabase.ts (added indicators table + index + RLS), src/components/program-dashboard.tsx (added Monitor button + monitoring view)
+- This is Phase 1 item #2 from the OS roadmap. Next: Public API v1 (the Win32 moment).
+
+---
+Task ID: 14
+Agent: main (Z.ai Code)
+Task: Build Public API v1 (the Win32 moment) + Knowledge Graph Schema spec. Third parties can now call HubForge's kernel programmatically.
+
+Work Log:
+- Created 5 API v1 endpoints:
+  • GET /api/v1/health — API version + endpoint list + docs link
+  • POST /api/v1/reason — run the full 9-engine pipeline (Supervisor → Retrieval → Rule → Reasoning → Critique → Improvement → Evaluation → Structure). Accepts problem, providerConfig, outputTypes, maxIterations, qualityThreshold. Returns strategy, evaluation, structured (toc+logframe), decomposition, retrieval, ruleChecks, provider, durationMs, rateLimit.
+  • POST /api/v1/structure — extract ToC + Logframe from a draft document
+  • GET /api/v1/knowledge — returns the full knowledge graph (frameworks, decisionRules, evidence, historicalMemory, reasoningPatterns, improvementHeuristics)
+  • GET /api/v1/packs — lists all installed domain packs (currently just Social Impact Pack, but the architecture is open for third-party packs)
+- Rate limiting integrated: shared-key users get 5/day (returns 429 with hint when exceeded), own-key users unlimited. Rate limit info returned in every /api/v1/reason response.
+- Created docs/knowledge-graph-schema.md — the open format spec for domain packs:
+  • DomainPack interface (8 layers: frameworks, decisionRules, evidence, historicalMemory, reasoningPatterns, improvementHeuristics, evaluationRubric, canonicalExample)
+  • Full TypeScript interfaces for each layer
+  • How to build a pack (create module → register → test → publish)
+  • Pack discovery via API endpoints
+  • Semantic versioning for packs
+  • The vision: 50 packs = HubForge as connective tissue of the social sector
+- Created docs/api-v1.md — public API documentation:
+  • Quick start with curl example
+  • All 5 endpoints documented with request/response schemas
+  • Provider config options (shared Z.ai, own Z.ai key, OpenAI, local Ollama)
+  • Rate limits explained
+  • SDK preview (coming soon)
+  • Link to knowledge graph schema spec
+- Lint passes clean (0 errors).
+- Verified all GET endpoints work via curl:
+  • /api/v1/health returns status:ok, version:v1, endpoint list ✅
+  • /api/v1/packs returns the Social Impact Pack with metadata ✅
+  • /api/v1/knowledge returns full knowledge graph (6 frameworks, 5 decision rules, 5 evidence sources, historical memory, reasoning patterns, improvement heuristics) ✅
+
+Stage Summary:
+- PUBLIC API v1 SHIPPED. This is the Win32 moment — third parties can now call HubForge's 9-engine kernel programmatically.
+- Any NGO, consultant, donor platform, or M&E tool can now integrate HubForge's reasoning pipeline via a simple HTTP API.
+- The Knowledge Graph Schema spec is published as an open format. Anyone can build a domain pack.
+- Files created:
+  • src/app/api/v1/health/route.ts
+  • src/app/api/v1/reason/route.ts (the main endpoint — full 9-engine pipeline)
+  • src/app/api/v1/structure/route.ts
+  • src/app/api/v1/knowledge/route.ts
+  • src/app/api/v1/packs/route.ts
+  • docs/knowledge-graph-schema.md (open pack format spec)
+  • docs/api-v1.md (public API docs)
+- This is Phase 2 item #1 from the OS roadmap. The platform is now open.

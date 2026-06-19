@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, FileText, Clock, Trash2, Copy, Search, Sparkles, Building2, BookOpen, Utensils, Droplet, Sprout, Heart, Database, CheckCircle2, KeyRound, Megaphone, X } from 'lucide-react'
+import { Plus, FileText, Clock, Trash2, Copy, Search, Sparkles, Building2, BookOpen, Utensils, Droplet, Sprout, Heart, Database, CheckCircle2, KeyRound, Megaphone, X, Activity, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -13,6 +13,7 @@ import { getPrograms, deleteProgram, duplicateProgram, syncProgramsFromSupabase,
 import { getOrgProfile } from '@/lib/organization'
 import { hasOrgSupabase } from '@/lib/org-supabase'
 import { getStoredProviderConfig } from '@/lib/providers'
+import { MonitoringTracker } from '@/components/monitoring-tracker'
 import { cn } from '@/lib/utils'
 
 interface ProgramDashboardProps {
@@ -29,6 +30,8 @@ const SCALING_NUDGE_KEY = 'hubforge.scalingNudgeDismissed'
 export function ProgramDashboard({ onNewProgram, onOpenProgram, onOpenSettings, onOpenDataStorage }: ProgramDashboardProps) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<string>('all')
+  // Monitoring: when set, show the monitoring tracker for this program.
+  const [monitoringProgramId, setMonitoringProgramId] = useState<string | null>(null)
 
   // Load programs and org on mount (lazy init)
   const [programs, setPrograms] = useState<Program[]>(() => typeof window !== 'undefined' ? getPrograms() : [])
@@ -101,6 +104,32 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram, onOpenSettings, 
     acc[s.id] = programs.filter((p) => p.status === s.id).length
     return acc
   }, {} as Record<string, number>)
+
+  // ── Monitoring view ──
+  // When the user clicks "Monitor" on a program, show the MonitoringTracker
+  // full-screen instead of the dashboard. This is the bridge from planning
+  // to operating system: strategies don't die at submission, they get tracked.
+  if (monitoringProgramId) {
+    const program = programs.find((p) => p.id === monitoringProgramId)
+    if (!program) { setMonitoringProgramId(null); return null }
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setMonitoringProgramId(null)}>
+            <ArrowLeft className="h-4 w-4" /> Back to programs
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-bold truncate flex items-center gap-2">
+              <Activity className="h-5 w-5 text-amber-600" />
+              {program.title}
+            </h1>
+            <p className="text-xs text-muted-foreground">Monitoring &amp; indicators</p>
+          </div>
+        </div>
+        <MonitoringTracker programId={program.id} logframe={program.structured?.logframe} />
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
@@ -307,6 +336,9 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram, onOpenSettings, 
 
                   {/* Actions (show on hover) */}
                   <div className="flex gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="sm" className="h-7 text-[10px] gap-1 text-amber-700 dark:text-amber-400" onClick={(e) => { e.stopPropagation(); setMonitoringProgramId(program.id) }}>
+                      <Activity className="h-3 w-3" /> Monitor
+                    </Button>
                     <Button variant="ghost" size="sm" className="h-7 text-[10px] gap-1" onClick={(e) => handleDuplicate(program.id, e)}>
                       <Copy className="h-3 w-3" /> Copy
                     </Button>

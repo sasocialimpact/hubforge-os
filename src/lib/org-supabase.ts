@@ -122,6 +122,26 @@ CREATE TABLE IF NOT EXISTS lessons (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Monitoring indicators + readings (the bridge from planning to OS)
+CREATE TABLE IF NOT EXISTS indicators (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  indicator_id TEXT UNIQUE NOT NULL,
+  program_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  level TEXT DEFAULT 'custom',
+  description TEXT,
+  baseline NUMERIC,
+  target NUMERIC,
+  current NUMERIC,
+  unit TEXT,
+  direction TEXT DEFAULT 'increase',
+  frequency TEXT DEFAULT 'quarterly',
+  mov TEXT,
+  readings JSONB DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- User profile (this device's profile - name, org, country, role)
 CREATE TABLE IF NOT EXISTS user_profiles (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -156,6 +176,7 @@ CREATE INDEX IF NOT EXISTS idx_programs_status ON programs (status);
 CREATE INDEX IF NOT EXISTS idx_programs_updated ON programs (updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sessions_created ON reasoning_sessions (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_blocks_type ON context_blocks (block_type);
+CREATE INDEX IF NOT EXISTS idx_indicators_program ON indicators (program_id);
 CREATE INDEX IF NOT EXISTS idx_analytics_type ON analytics_events (event_type);
 CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics_events (created_at DESC);
 
@@ -164,6 +185,7 @@ ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reasoning_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE context_blocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lessons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE indicators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
 
@@ -172,5 +194,6 @@ CREATE POLICY "Allow all for anon" ON programs FOR ALL USING (true) WITH CHECK (
 CREATE POLICY "Allow all for anon" ON reasoning_sessions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON context_blocks FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON lessons FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for anon" ON indicators FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON user_profiles FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON analytics_events FOR ALL USING (true) WITH CHECK (true);`

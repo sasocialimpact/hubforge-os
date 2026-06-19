@@ -1,0 +1,159 @@
+// POST /api/v1/reason — Public API v1: run the 9-engine reasoning pipeline.
+//
+// This is the Win32 moment. Third parties can now call HubForge's kernel
+// programmatically: NGOs, consultants, donor platforms, other M&E tools.
+//
+// Request:
+//   {
+//     "problem": "Design a literacy program for 500 children in rural Kenya",
+//     "providerConfig": { "provider": "zai" },  // optional
+//     "outputTypes": ["strategy", "toc", "logframe"],  // optional
+//     "maxIterations": 2,  // optional, default 2
+//     "qualityThreshold": 80  // optional, default 80
+//   }
+//
+// Response:
+//   {
+//     "strategy": "# Strategy Document\n...",
+//     "evaluation": { "overall": 85, "thresholdMet": true },
+//     "structured": { "toc": {...}, "logframe": {...} },
+//     "iterations": 1,
+//     "provider": "Z.ai (shared, free)",
+//     "durationMs": 45000
+//   }
+//
+// Auth: For now, no API key required (shared Z.ai key is used). When the
+// platform scales, add HUBFORGE_API_KEY env var + Bearer token check.
+// Users who pass their own providerConfig.apiKey bypass the shared key.
+import { NextRequest, NextResponse } from 'next/server'
+import {
+  supervisorEngine, retrievalEngine, ruleEngine, reasoningEngine,
+  critiqueEngine, improvementEngine, evaluationEngine, structureEngine,
+  socialImpactPack, normalizeConfig, describeProvider,
+  type ProviderConfig, type OutputType,
+} from '@/lib/engine-access'
+import { checkRateLimit, recordStrategyGeneration } from '@/lib/server/rate-limit-server'
+
+export const maxDuration = 90
+
+export async function POST(req: NextRequest) {
+  const start = Date.now()
+  try {
+    const body = await req.json()
+    const { problem, providerConfig, outputTypes, maxIterations, qualityThreshold } = body as {
+      problem: string
+      providerConfig?: ProviderConfig
+      outputTypes?: OutputType[]
+      maxIterations?: number
+      qualityThreshold?: number
+    }
+
+    // ── Input validation ──
+    if (!problem || typeof problem !== 'string') {
+      return NextResponse.json({ error: 'problem is required (string)' }, { status: 400 })
+    }
+    if (problem.length > 10000) {
+      return NextResponse.json({ error: 'problem too long (max 10000 chars)' }, { status: 400 })
+    }
+
+    const config = normalizeConfig(providerConfig)
+    const outputs = outputTypes && Array.isArray(outputTypes) ? outputTypes : (['strategy'] as OutputType[])
+    const maxIter = Math.min(Math.max(maxIterations ?? 2, 1), 3) // clamp 1-3
+    const threshold = qualityThreshold ?? 80
+
+    // ── Rate limit check (shared key only) ──
+    const profileId = req.headers.get('x-hubforge-profile-id') || null
+    const rateLimit = checkRateLimit(profileId, config.provider)
+    if (!rateLimit.allowed) {
+      return NextResponse.json({
+        error: 'Daily strategy limit reached',
+        used: rateLimit.used,
+        limit: rateLimit.limit,
+        resetsAt: rateLimit.resetsAt,
+        hint: 'Add your own API key (providerConfig.apiKey) for unlimited access, or try again tomorrow.',
+      }, { status: 429 })
+    }
+
+    // ── Run the 9-engine pipeline ──
+    // 1. Supervisor
+    const decomposition = await supervisorEngine(config, problem, socialImpactPack)
+
+    // 2. Retrieval
+    const retrieval = retrievalEngine(problem, decomposition, socialImpactPack)
+
+    // 3. Rule checks
+    const ruleChecks = ruleEngine(problem, socialImpactPack)
+
+    // 4-8. Iterative loop: Reasoning → Critique → Improvement → Evaluation
+    let priorDraft: string | null = null
+    let priorCritique: string | null = null
+    let finalDraft = ''
+    let finalScore = 0
+    let thresholdMet = false
+    let iterations = 0
+
+    for (let iter = 1; iter <= maxIter; iter++) {
+      iterations = iter
+      const draft = await reasoningEngine(
+        config, problem, decomposition, retrieval, priorCritique, priorDraft,
+        socialImpactPack, iter, maxIter, outputs, {}, undefined, undefined, undefined
+      )
+      const critique = await critiqueEngine(config, draft, socialImpactPack)
+      const improved = await improvementEngine(config, draft, critique, socialImpactPack)
+      const evaluation = await evaluationEngine(config, improved, socialImpactPack, threshold)
+
+      finalDraft = improved
+      finalScore = evaluation.overall
+      thresholdMet = evaluation.thresholdMet
+      priorDraft = improved
+      priorCritique = critique.issues.map((i: any) => `[${i.severity}] (${i.heuristic}) ${i.description}`).join('\n')
+
+      if (evaluation.thresholdMet) break
+    }
+
+    // 9. Structure (ToC + Logframe)
+    let structured: any = {}
+    if (outputs.includes('toc') || outputs.includes('logframe')) {
+      structured = await structureEngine(config, finalDraft, outputs)
+    }
+
+    // Record the generation for rate limiting (only shared key users).
+    recordStrategyGeneration(profileId, config.provider)
+
+    const durationMs = Date.now() - start
+
+    return NextResponse.json({
+      strategy: finalDraft,
+      evaluation: { overall: finalScore, thresholdMet, iterations },
+      structured: {
+        toc: structured.toc ?? null,
+        logframe: structured.logframe ?? null,
+      },
+      decomposition: {
+        problemStatement: decomposition.problemStatement,
+        objectives: decomposition.objectives,
+        scope: decomposition.scope,
+        stakeholders: decomposition.stakeholders,
+        suggestedFrameworks: decomposition.suggestedFrameworks,
+      },
+      retrieval: {
+        frameworks: retrieval.frameworks.map((f: any) => f.name),
+        evidence: retrieval.evidence.map((e: any) => e.title),
+      },
+      ruleChecks,
+      provider: describeProvider(config),
+      durationMs,
+      rateLimit: {
+        used: rateLimit.used + (config.provider === 'zai' ? 1 : 0),
+        limit: rateLimit.limit,
+        remaining: rateLimit.isOwnKey ? Infinity : Math.max(0, rateLimit.limit - rateLimit.used - 1),
+      },
+    })
+  } catch (e: any) {
+    console.error('[/api/v1/reason] error:', e)
+    return NextResponse.json({
+      error: e?.message ?? 'Internal error',
+      durationMs: Date.now() - start,
+    }, { status: 500 })
+  }
+}
