@@ -358,3 +358,30 @@ Stage Summary:
   • Onboarding: "HOW HUBFORGE STAYS FREE" with 3 bullets (free shared key / own key / own Supabase). VLM confirmed. ✅
 - Files created: src/lib/server/llm-rate-limit.ts, src/lib/server/rate-limit-server.ts, src/lib/server/platform-supabase.ts, src/app/api/rate-limit/route.ts, src/lib/use-rate-limit.ts
 - Files modified: src/lib/engines.ts, src/lib/api-client.ts, src/lib/server/org-supabase.ts, src/components/usage-panel.tsx, src/components/program-dashboard.tsx, src/components/onboarding.tsx, src/app/page.tsx, .env.example
+
+---
+Task ID: 10
+Agent: main (Z.ai Code)
+Task: Fix Settings dialog — switching AI providers wasn't updating the model/baseUrl fields (kept old provider's values); user reported key field only showed for Groq & Z.ai.
+
+Work Log:
+- Investigated the Settings dialog (src/components/settings-dialog.tsx). Found the root cause in handleSelectProvider():
+  • Old logic: `baseUrl: config.baseUrl && config.baseUrl !== '' ? config.baseUrl : meta.defaultBaseUrl`
+  • This preserved the OLD provider's baseUrl/model when switching, so e.g. OpenAI → Anthropic kept "gpt-4o-mini" + "https://api.openai.com/v1" instead of updating to "claude-3-5-sonnet-20241022" + "https://api.anthropic.com/v1".
+  • The user saw stale model/baseUrl values and may have thought the key field was missing (because the wrong URL/model made the provider look broken).
+- Fixed handleSelectProvider(): now ALWAYS resets model + baseUrl to the new provider's defaults. API key is preserved only if the new provider also needs one (e.g. OpenAI → Groq keeps the key; OpenAI → Local drops it).
+- Verified in browser (Agent Browser):
+  • OpenAI: model=gpt-4o-mini, baseUrl=https://api.openai.com/v1, key field present ✅
+  • Switch to Anthropic: model UPDATED to claude-3-5-sonnet-20241022, baseUrl UPDATED to https://api.anthropic.com/v1, key field present ✅
+  • Switch to Gemini: model=gemini-1.5-flash, baseUrl=https://generativelanguage.googleapis.com/v1beta/openai, key field present ✅
+  • Switch to Local (Ollama): model=gemma2:9b, baseUrl=http://localhost:11434/v1, NO key field (correct — Ollama doesn't need one) ✅
+  • Z.ai (shared): no config panel, info box only ✅
+  • Z.ai (own key): key field + model=glm-4.6 + baseUrl=https://api.z.ai/api/paas/v4 ✅
+  • Groq: key field + model=llama-3.3-70b-versatile + baseUrl=https://api.groq.com/openai/v1 ✅
+- Lint passes clean (0 errors).
+
+Stage Summary:
+- BUG FIXED: Settings dialog now correctly updates the model and base URL fields when switching providers. Previously, switching providers kept the old provider's model/URL values, making it look like the settings weren't changing.
+- The API key field was always present for all key-needing providers (zai-key, groq, openai, anthropic, gemini) — the user likely couldn't tell because the model/URL fields showed the wrong provider's values.
+- File modified: src/components/settings-dialog.tsx (handleSelectProvider function, ~10 lines changed).
+- All 7 providers verified working with correct defaults.

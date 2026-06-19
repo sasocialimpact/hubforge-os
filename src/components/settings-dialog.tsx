@@ -28,11 +28,17 @@ export function SettingsDialog({ open, onOpenChange, onSaved }: SettingsDialogPr
   const selectedMeta = PROVIDERS.find((p) => p.id === config.provider)!
 
   const handleSelectProvider = (meta: ProviderMeta) => {
+    // When switching providers, ALWAYS reset model + baseUrl to the new
+    // provider's defaults. The old logic preserved non-empty values, which
+    // meant switching OpenAI → Anthropic kept "gpt-4o-mini" + the OpenAI URL
+    // instead of updating to Claude's model + Anthropic URL.
     setConfig({
       provider: meta.id,
+      // Preserve the API key only if the new provider also needs one.
+      // (Switching from OpenAI to Groq keeps the key; switching to Local drops it.)
       apiKey: meta.needsKey ? config.apiKey : '',
-      baseUrl: meta.id === 'zai' ? '' : (config.baseUrl && config.baseUrl !== '' ? config.baseUrl : meta.defaultBaseUrl),
-      model: meta.id === 'zai' ? '' : (config.model && config.model !== '' ? config.model : meta.defaultModel),
+      baseUrl: meta.defaultBaseUrl,
+      model: meta.defaultModel,
     })
   }
 
