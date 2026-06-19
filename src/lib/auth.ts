@@ -353,6 +353,25 @@ export async function signup(params: SignupParams): Promise<SignupResult> {
   }
   saveSession(session)
 
+  // Store the profile locally so the UI + org page can read it.
+  // (The server-side path stores this at line 301; the localStorage
+  // fallback must do the same or the org page shows "Not set".)
+  try {
+    localStorage.setItem('hubforge.userProfile', JSON.stringify({
+      userId: account.id,
+      email: account.email,
+      name: profile?.name || '',
+      country: profile?.country || '',
+      role: profile?.role || '',
+      organization: profile?.organization || '',
+      orgType: profile?.orgType || '',
+      sectors: profile?.sectors || [],
+      operatingCountries: profile?.operatingCountries || [],
+      teamSize: profile?.teamSize || '',
+      analyticsOptIn: consent.analyticsOptIn,
+    }))
+  } catch {}
+
   return { success: true, session }
 }
 

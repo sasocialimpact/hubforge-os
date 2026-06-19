@@ -27,6 +27,10 @@ type Mode = 'general' | 'geek'
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>('general')
+  // When the user clicks a saved program, we pass its ID to GeneralMode so
+  // it loads the saved outputs (strategy, ToC, logframe) instead of showing
+  // the empty build form. null = new program (show build form).
+  const [activeProgramId, setActiveProgramId] = useState<string | null>(null)
   // 'landing' = marketing landing page (default for first visit)
   // 'dashboard' = saved programs grid
   // 'workspace' = general/geek mode builder
@@ -239,15 +243,15 @@ export default function Home() {
       <main className="flex-1">
         {view === 'dashboard' ? (
           <ProgramDashboard
-            onNewProgram={() => { setView('workspace'); setMode('general') }}
-            onOpenProgram={() => { setView('workspace') }}
+            onNewProgram={() => { setView('workspace'); setMode('general'); setActiveProgramId(null) }}
+            onOpenProgram={(program) => { setActiveProgramId(program.id); setView('workspace'); setMode('general') }}
             onOpenSettings={openCommandCenter}
             onOpenDataStorage={() => setDataStorageOpen(true)}
           />
         ) : (
           <>
             <div className={cn(mode === 'general' ? 'block' : 'hidden')}>
-              <GeneralMode connected={connected} providerConfig={providerConfig} />
+              <GeneralMode connected={connected} providerConfig={providerConfig} programId={activeProgramId} />
             </div>
             <div className={cn(mode === 'geek' ? 'block' : 'hidden')}>
               <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles, ArrowRight, ArrowLeft, Loader2, FileText, Workflow, Table2, ClipboardCheck,
@@ -27,6 +27,7 @@ import {
 import { analytics, setAnalyticsSession } from '@/lib/analytics'
 import { getOrgProfile, getOrgContextBlock } from '@/lib/organization'
 import { socialImpactPackMeta, EXAMPLE_PROBLEMS } from '@/lib/social-impact-pack'
+import { getProgram } from '@/lib/programs'
 import { cn } from '@/lib/utils'
 
 type Phase = 'input' | 'interview' | 'building' | 'deliverable'
@@ -70,11 +71,33 @@ interface Deliverable {
 const MAX_ITERATIONS = 2
 const QUALITY_THRESHOLD = 80
 
-export function GeneralMode({ connected, providerConfig }: { connected: boolean; providerConfig: ProviderConfig }) {
+export function GeneralMode({ connected, providerConfig, programId }: { connected: boolean; providerConfig: ProviderConfig; programId?: string | null }) {
   const [phase, setPhase] = useState<Phase>('input')
   const [problem, setProblem] = useState('')
   const [outputTypes, setSelectedOutputs] = useState<OutputType[]>(['strategy', 'toc'])
   const [settingsOpen, setSettingsOpen] = useState(false)
+
+  // When a programId is passed (user clicked a saved program), load it
+  // and jump straight to the deliverable phase so they see their outputs.
+  useEffect(() => {
+    if (!programId) return
+    try {
+      const program = getProgram(programId)
+      if (!program) return
+      setProblem(program.problem || '')
+      setSelectedOutputs((program.outputTypes as OutputType[]) || ['strategy', 'toc'])
+      if (program.draft || program.structured) {
+        setDeliverable({
+          draft: program.draft || '',
+          evaluation: program.evaluation || null,
+          structured: program.structured || null,
+          outputTypes: (program.outputTypes as OutputType[]) || ['strategy', 'toc'],
+        })
+        setFeedbackHistory(program.feedbackHistory || [])
+        setPhase('deliverable')
+      }
+    } catch {}
+  }, [programId])
 
   const [questions, setQuestions] = useState<ClarifyingQuestion[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
