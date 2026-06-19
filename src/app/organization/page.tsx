@@ -170,6 +170,19 @@ export default function OrganizationPage() {
           </p>
         </div>
 
+        {/* Pre-filled banner (shown when org was seeded from signup) */}
+        {hasProfile && profile.name && !profile.mission && (
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 flex items-start gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <p className="font-medium text-emerald-800 dark:text-emerald-300">Pre-filled from your signup</p>
+              <p className="text-muted-foreground mt-0.5">
+                We've auto-filled your organization name and country from your account. Add more details below (mission, sectors, donors) to make your strategies even better.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Section 1: Identity */}
         <Section
           icon={Building2}

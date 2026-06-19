@@ -516,12 +516,33 @@ export function exportAccountData(): any {
 export function deleteAccount(): void {
   const session = getSession()
   if (!session) return
+  // Clear platform identity
   const accounts = getLocalAccounts().filter((a) => a.id !== session.userId)
   saveLocalAccounts(accounts)
   saveSession(null)
-  // Note: programs, indicators, etc. in the user's own Supabase are NOT
-  // deleted by this - the user controls their own database. We only delete
-  // the platform identity.
+  // Clear all local data so nothing lingers (GDPR right to be forgotten).
+  // Programs, indicators, etc. in the user's OWN Supabase are NOT touched -
+  // the user controls their own database. We only clear this browser.
+  try {
+    localStorage.removeItem('hubforge.accessToken')
+    localStorage.removeItem('hubforge.refreshToken')
+    localStorage.removeItem('hubforge.userProfile')
+    localStorage.removeItem('hubforge.session')
+    localStorage.removeItem('hubforge.profile')
+    localStorage.removeItem('hubforge.organization')
+    localStorage.removeItem('hubforge.programs')
+    localStorage.removeItem('hubforge.indicators')
+    localStorage.removeItem('hubforge.contextBlocks')
+    localStorage.removeItem('hubforge.usage')
+    localStorage.removeItem('hubforge.landingSeen')
+    localStorage.removeItem('hubforge.onboarded')
+    localStorage.removeItem('hubforge.scalingNudgeDismissed')
+  } catch {}
+  // Best-effort server-side account deletion (if Supabase configured)
+  try {
+    const token = localStorage.getItem('hubforge.accessToken')
+    if (token) fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+  } catch {}
 }
 
 // ───────────────────────────────────────────────────────────────────────────

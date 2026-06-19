@@ -12,10 +12,11 @@ import { DataStorageDialog } from '@/components/data-storage-dialog'
 import { ProgramDashboard } from '@/components/program-dashboard'
 import { UsagePanel } from '@/components/usage-panel'
 import { InstallPrompt } from '@/components/install-prompt'
-import { FirstRunOnboarding, useShouldOnboard } from '@/components/onboarding'
 import { CommandCenter, useCommandPalette } from '@/components/command-palette'
 import { AuthDialog } from '@/components/auth-dialog'
-import { isLoggedIn, getDisplayEmail, getInitials } from '@/lib/auth'
+import { isLoggedIn, getDisplayEmail, getInitials, getStoredProfile } from '@/lib/auth'
+import { getProfile as getUserProfile, storeProfile as storeUserProfile, type UserProfile } from '@/lib/user-profile'
+import { getOrgProfile, storeOrgProfile, type OrganizationProfile } from '@/lib/organization'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getStoredProviderConfig, type ProviderConfig } from '@/lib/providers'
 import { hasOrgSupabase, type OrgSupabaseConfig } from '@/lib/org-supabase'
@@ -55,8 +56,6 @@ export default function Home() {
   const [authRev, setAuthRev] = useState(0)
   const [authOpen, setAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState<'signup' | 'login' | 'account'>('signup')
-  const shouldOnboard = useShouldOnboard()
-  const [onboardingDone, setOnboardingDone] = useState(false)
 
   const connected = true
 
@@ -99,30 +98,77 @@ export default function Home() {
   }
 
   // When auth state changes (login/logout), re-evaluate the view.
-  // - On login: if we were on landing, go to dashboard.
+  // - On login: seed the org profile from signup data so the org page
+  //   doesn't ask for the same info again. Then go to dashboard.
   // - On logout: force back to landing (auth gate).
   const handleAuthChange = () => {
     setAuthRev((n) => n + 1)
     if (isLoggedIn()) {
       try { localStorage.setItem('hubforge.landingSeen', '1') } catch {}
+      // Seed the org profile + user profile from the signup data so the
+      // org page auto-populates instead of asking again.
+      seedProfilesFromSignup()
       setView('dashboard')
     } else {
       setView('landing')
     }
   }
 
+  // After signup, the user's name/country/role/org are stored in
+  // hubforge.userProfile (set by auth.ts). This function copies that data
+  // into the org profile (hubforge.organization) + user profile
+  // (hubforge.profile) so the org page and other components see it.
+  const seedProfilesFromSignup = () => {
+    try {
+      const signupProfile = getStoredProfile()
+      if (!signupProfile) return
+
+      // Seed user-profile.ts (used by dashboard components)
+      const existing = getUserProfile()
+      if (!existing || !existing.name) {
+        const profile: UserProfile = {
+          profileId: existing?.profileId || `u-${Date.now()}`,
+          name: signupProfile.name || '',
+          email: signupProfile.email || '',
+          organization: signupProfile.organization || '',
+          country: signupProfile.country || '',
+          role: signupProfile.role || '',
+        }
+        storeUserProfile(profile)
+      }
+
+      // Seed organization.ts (used by /organization page + reasoning context)
+      // Only seed if no org profile exists yet - don't overwrite.
+      const existingOrg = getOrgProfile()
+      if (!existingOrg) {
+        const orgProfile: OrganizationProfile = {
+          id: `org-${Date.now()}`,
+          name: signupProfile.organization || '',
+          type: 'NGO (National)',
+          registrationCountry: signupProfile.country || '',
+          operatingCountries: signupProfile.country ? [signupProfile.country] : [],
+          operatingGeographies: '',
+          sectors: [],
+          mission: '',
+          teamSize: '',
+          meCapacity: '',
+          budgetRange: '',
+          keyDonors: '',
+          reportingFrameworks: '',
+          languages: '',
+          pastResults: '',
+          updatedAt: new Date().toISOString(),
+        }
+        storeOrgProfile(orgProfile)
+      }
+    } catch (e) {
+      // Non-fatal - the org page will just start empty
+    }
+  }
+
   const handleProviderSaved = (newConfig: ProviderConfig) => {
     setProviderConfig(newConfig)
     analytics.providerChanged({ from: providerConfig.provider, to: newConfig.provider })
-  }
-
-  const handleOnboardingComplete = () => {
-    setOnboardingDone(true)
-    analytics.onboardingComplete({
-      provider: providerConfig.provider,
-      hasKey: providerConfig.provider === 'zai-key' || !!providerConfig.apiKey,
-      sharedProfile: true,
-    })
   }
 
   return (
@@ -253,9 +299,6 @@ export default function Home() {
         </DialogContent>
       </Dialog>
       <InstallPrompt />
-      {shouldOnboard && !onboardingDone && (
-        <FirstRunOnboarding onComplete={handleOnboardingComplete} />
-      )}
         </>
       )}
       {/* Auth dialog - ALWAYS mounted, even on landing page, so "Launch App"
