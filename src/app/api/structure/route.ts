@@ -8,7 +8,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { finalDraft, outputTypes, providerConfig } = body as { finalDraft: string; outputTypes: OutputType[]; providerConfig?: ProviderConfig }
-    if (!finalDraft) return NextResponse.json({ error: 'finalDraft is required' }, { status: 400 })
+    if (!finalDraft || typeof finalDraft !== 'string') return NextResponse.json({ error: 'finalDraft is required' }, { status: 400 })
+    if (finalDraft.length > 50000) return NextResponse.json({ error: 'finalDraft too long (max 50000 chars)' }, { status: 400 })
     const config = normalizeConfig(providerConfig)
     const structured = await structureEngine(config, finalDraft, outputTypes)
     return NextResponse.json({ toc: structured.toc ?? null, logframe: structured.logframe ?? null })

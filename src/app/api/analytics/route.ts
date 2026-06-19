@@ -4,10 +4,23 @@
 //   1. User's own Supabase (X-Org-Supabase-* headers) → events go to THEIR DB
 //   2. Platform Supabase (env vars) — for platform-level analytics (opt-in)
 //   3. In-memory store
+//
+// ADMIN KEY:
+//   The admin dashboard is gated by HUBFORGE_ADMIN_KEY. If the env var is
+//   not set, admin endpoints return 403 (no insecure default).
 import { NextRequest, NextResponse } from 'next/server'
 export const maxDuration = 10
 
-const ADMIN_KEY = process.env.HUBFORGE_ADMIN_KEY || 'hubforge-admin-2024'
+function requireAdminKey(provided: string | null): boolean {
+  const expected = process.env.HUBFORGE_ADMIN_KEY
+  if (!expected) return false // admin disabled until env var is configured
+  if (!provided) return false
+  if (provided.length !== expected.length) return false
+  let diff = 0
+  for (let i = 0; i < provided.length; i++) diff |= provided.charCodeAt(i) ^ expected.charCodeAt(i)
+  return diff === 0
+}
+
 const eventStore: any[] = []
 
 let platformClient: any = null
@@ -80,7 +93,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const adminKey = searchParams.get('admin_key')
     const days = parseInt(searchParams.get('days') || '30')
-    if (!adminKey || adminKey !== ADMIN_KEY) return NextResponse.json({ error: 'Invalid admin key' }, { status: 403 })
+    if (!requireAdminKey(adminKey)) {
+      return NextResponse.json({ error: 'Invalid or missing admin key' }, { status: 403 })
+    }
 
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 

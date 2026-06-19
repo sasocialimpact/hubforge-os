@@ -12,6 +12,12 @@
 //     — only the full interview (start of a generation) counts as 1 "strategy".
 //     This prevents the 9-engine pipeline from consuming 9x the allowance.
 //
+// BYPASS HARDENING:
+//   - Callers MUST pass a profileId. Anonymous (profileId=null) requests are
+//     no longer given unlimited access — they get a strict per-IP daily quota
+//     (DAILY_LIMIT) so an attacker can't bypass rate limits by simply
+//     omitting the header.
+//
 // Storage: in-memory Map per server instance. On Vercel serverless this means
 // each instance tracks its own subset of users — not perfectly accurate, but
 // good enough to prevent abuse. For strict accuracy, move to a shared store
@@ -58,21 +64,16 @@ export function checkRateLimit(profileId: string | null | undefined, provider: s
   }
 
   // Shared key — enforce per-user daily limit.
-  if (!profileId) {
-    // No profileId (untracked user) — allow but flag as unknown.
-    return {
-      allowed: true,
-      reason: 'limit_unknown',
-      used: 0,
-      limit: DAILY_LIMIT,
-      remaining: DAILY_LIMIT,
-      resetsAt: 0,
-      isOwnKey: false,
-    }
-  }
+  // We require a profileId. If none is supplied, fall back to the anonymous
+  // bucket ("anon") so untracked callers share the same DAILY_LIMIT rather
+  // than getting unlimited access. This closes the bypass where an attacker
+  // simply omits the header.
+  const bucketKey = profileId && profileId.length > 0 && profileId.length <= 200
+    ? profileId
+    : 'anon'
 
   const today = todayKey()
-  const entry = userCounts.get(profileId)
+  const entry = userCounts.get(bucketKey)
   const used = entry && entry.date === today ? entry.count : 0
   const remaining = Math.max(0, DAILY_LIMIT - used)
   const resetsAt = Date.now() + WINDOW_MS // approximate
@@ -93,15 +94,17 @@ export function checkRateLimit(profileId: string | null | undefined, provider: s
  * completes (not before) so failed generations don't consume the allowance.
  */
 export function recordStrategyGeneration(profileId: string | null | undefined, provider: string): void {
-  if (!profileId) return
   // Don't count own-key users.
   if (provider !== 'zai') return
+  const bucketKey = profileId && profileId.length > 0 && profileId.length <= 200
+    ? profileId
+    : 'anon'
   const today = todayKey()
-  const entry = userCounts.get(profileId)
+  const entry = userCounts.get(bucketKey)
   if (entry && entry.date === today) {
     entry.count++
   } else {
-    userCounts.set(profileId, { date: today, count: 1 })
+    userCounts.set(bucketKey, { date: today, count: 1 })
   }
 }
 

@@ -11,6 +11,14 @@
 // Supabase project, which creates the tables and RLS policies. HubForge
 // platform servers NEVER see the user's data — they only proxy the request
 // to the user's Supabase.
+//
+// SSRF HARDENING:
+//   - URL must be HTTPS (or localhost http for dev only).
+//   - URL must look like a Supabase project URL (https://<ref>.supabase.co)
+//     OR a known-equivalent (supabase.co, supabase.in, supabase.red). We
+//     reject http://169.254.169.254 (AWS metadata), private/internal IP
+//     literals, and other SSRF targets. Self-hosted Supabase users can
+//     set HUBFORGE_ALLOWED_ORIGINS env var to whitelist their host.
 
 import type { NextRequest } from 'next/server'
 
@@ -22,17 +30,82 @@ export interface OrgSupabaseCreds {
   anonKey: string
 }
 
+// Hosts we always allow for org-supplied Supabase URLs. The wildcard
+// `*.supabase.co` (and regional variants) covers every Supabase project.
+const ALLOWED_HOST_SUFFIXES = [
+  '.supabase.co',
+  '.supabase.in',
+  '.supabase.red',
+]
+
+// Allow localhost / 127.0.0.1 in non-production for dev workflows (Ollama,
+// local Supabase via docker). In production we REQUIRE a public suffix.
+function isLocalDevHost(host: string): boolean {
+  if (process.env.NODE_ENV === 'production') return false
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1'
+}
+
+// Block obvious SSRF targets: link-local, loopback (except dev), private
+// ranges, cloud-metadata endpoints.
+function isBlockedHost(host: string): boolean {
+  const h = host.toLowerCase()
+  if (h === '169.254.169.254' || h.startsWith('169.254.')) return true // AWS/GCP metadata
+  if (h === 'metadata.google.internal') return true
+  if (h.endsWith('.internal') || h.endsWith('.local')) return true
+  if (/^10\./.test(h)) return true
+  if (/^192\.168\./.test(h)) return true
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true
+  // IPv6 link-local / unique-local
+  if (h.startsWith('fe80:') || h.startsWith('fc') || h.startsWith('fd')) return true
+  if (process.env.NODE_ENV === 'production' && (h === 'localhost' || h === '127.0.0.1' || h === '::1')) return true
+  return false
+}
+
 /**
  * Extract org-supplied Supabase credentials from request headers.
- * Returns null if the user hasn't connected their own Supabase.
+ * Returns null if the user hasn't connected their own Supabase, or if the
+ * URL fails the SSRF check (private IP, metadata endpoint, etc.).
  */
 export function getOrgSupabaseCredsFromRequest(req: NextRequest): OrgSupabaseCreds | null {
   const url = req.headers.get(ORG_SUPABASE_URL_HEADER)?.trim()
   const anonKey = req.headers.get(ORG_SUPABASE_KEY_HEADER)?.trim()
   if (!url || !anonKey) return null
-  // Basic sanity check — must look like a Supabase URL
-  if (!/^https?:\/\/.+\..+/.test(url)) return null
-  return { url, anonKey }
+  if (anonKey.length > 1024) return null
+
+  let parsed: URL
+  try { parsed = new URL(url) } catch { return null }
+
+  // Scheme: HTTPS only in production; allow http only for local dev hosts.
+  if (parsed.protocol !== 'https:') {
+    if (!(parsed.protocol === 'http:' && isLocalDevHost(parsed.hostname))) return null
+  }
+  // Port: reject weird ports for HTTPS (default 443 allowed implicitly).
+  // Allow only standard ports (none / 443 / 80 for dev).
+  if (parsed.port && parsed.port !== '443' && parsed.port !== '80') {
+    // Self-hosted Supabase may run on custom ports — allow only if the
+    // host is a local dev host.
+    if (!isLocalDevHost(parsed.hostname)) return null
+  }
+  // Path must not allow smuggling tricks (no @, no encoded slashes).
+  if (parsed.username || parsed.password) return null
+
+  const host = parsed.hostname
+  if (isBlockedHost(host)) return null
+
+  // Allowed: *.supabase.co (and regional variants), local dev hosts,
+  // and any host explicitly whitelisted via HUBFORGE_ALLOWED_ORIGINS
+  // (comma-separated list of hostnames).
+  const allowed =
+    ALLOWED_HOST_SUFFIXES.some((suffix) => host.endsWith(suffix)) ||
+    isLocalDevHost(host)
+  if (!allowed) {
+    const envAllowed = process.env.HUBFORGE_ALLOWED_ORIGINS
+    if (!envAllowed) return null
+    const extra = envAllowed.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
+    if (!extra.includes(host.toLowerCase())) return null
+  }
+
+  return { url: parsed.toString(), anonKey }
 }
 
 // In-memory cache of Supabase clients keyed by URL (anon keys rotate rarely,

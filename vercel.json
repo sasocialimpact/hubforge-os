@@ -9,6 +9,12 @@
     "src/app/api/search/route.ts": { "maxDuration": 60 },
     "src/app/api/memory/route.ts": { "maxDuration": 10 },
     "src/app/api/profile/route.ts": { "maxDuration": 10 },
-    "src/app/api/analytics/route.ts": { "maxDuration": 10 }
+    "src/app/api/analytics/route.ts": { "maxDuration": 10 },
+    "src/app/api/rate-limit/route.ts": { "maxDuration": 10 },
+    "src/app/api/v1/health/route.ts": { "maxDuration": 10 },
+    "src/app/api/v1/knowledge/route.ts": { "maxDuration": 10 },
+    "src/app/api/v1/packs/route.ts": { "maxDuration": 10 },
+    "src/app/api/v1/structure/route.ts": { "maxDuration": 60 },
+    "src/app/api/v1/reason/route.ts": { "maxDuration": 90 }
   }
 }

@@ -80,10 +80,24 @@ By default, your data (programs, sessions, context blocks) lives in your browser
 
 1. Push to GitHub
 2. Go to [vercel.com](https://vercel.com) → Import repo → Deploy
-3. (Optional) Add `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` env vars for platform-level analytics
-4. (Optional) Set `HUBFORGE_ADMIN_KEY` to secure the admin dashboard
+3. (Optional) Add `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` env vars for platform-level analytics + server-side auth
+4. (Optional but recommended) Set `HUBFORGE_ADMIN_KEY` to a long random string to enable the `/admin` dashboard. **If unset, `/admin` returns 403 — there is no insecure default.**
+5. (Optional) Set `HUBFORGE_ALLOWED_ORIGINS` (comma-separated) only if users need to connect to self-hosted Supabase instances not on `*.supabase.co`.
 
 Cost: **$0/month** on free tiers.
+
+## Features
+
+- **9-engine recursive reasoning pipeline** — Supervisor → Retrieval → Web Search → Rule → Reasoning → Critique → Improvement → Evaluation → Structure, with quality threshold + iterative improvement.
+- **Identity & auth layer** — email + PBKDF2-hashed password, GDPR/DPDP consent record, right-to-export, right-to-be-forgotten. Anonymous users see the landing page only; "Launch App" opens signup.
+- **7 AI providers** — shared Z.ai (free, rate-limited) or bring your own key (OpenAI, Anthropic, Gemini, Groq, Z.ai own key, local Ollama). User API keys never touch HubForge servers — they go from the browser directly to the provider.
+- **Program workspaces** — save/resume multiple programs, tag by donor / geography / sector / budget, sync to your own Supabase.
+- **Templates** — 5 offline-capable program templates (FLN, school feeding, water rehab, climate-smart ag, MCH) that create a 90% complete program in <1 second with no AI.
+- **Monitoring tracker** — derive indicators from logframe OVIs, add readings over time, RAG (Red/Amber/Green) status computed automatically, next-due-date scheduling.
+- **Public API v1** — `POST /api/v1/reason`, `POST /api/v1/structure`, `GET /api/v1/knowledge`, `GET /api/v1/packs`, `GET /api/v1/health`. Third parties can call HubForge's 9-engine kernel programmatically.
+- **Smart caching** — interview, retrieval, web search, and structure results are cached in `localStorage` for 24h–7d. Reasoning / critique / improvement / evaluation are always fresh.
+- **Admin dashboard** — `/admin` shows analytics (DAU, conversion funnel, provider usage, quality distribution, recent errors) gated by `HUBFORGE_ADMIN_KEY`.
+- **PWA** — installable, offline-capable (templates + monitoring + editing + export all work without AI or internet).
 
 ## Documentation
 

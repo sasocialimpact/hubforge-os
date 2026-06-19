@@ -16,7 +16,7 @@ export async function GET() {
       'GET /api/v1/packs — List available domain packs',
       'GET /api/v1/health — This endpoint',
     ],
-    docs: 'https://hubforge-os.dev/api',
+    docs: 'https://github.com/presciencelabs/hubforge-os/blob/main/docs/api-v1.md',
     license: 'Apache-2.0',
   })
 }

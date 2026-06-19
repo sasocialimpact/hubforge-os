@@ -19,13 +19,22 @@
 //   - Consent version tracked (so we can re-prompt if terms change)
 //   - Right to export: GET /api/auth/export
 //   - Right to delete: DELETE /api/auth/account
+//
+// PASSWORD HASHING:
+//   - PBKDF2 (Web Crypto) with 150,000 iterations of SHA-256, 16-byte salt,
+//     32-byte derived key. Stored as `pbkdf2$<iterations>$<saltHex>$<hashHex>`.
+//   - PBKDF2 is a slow KDF designed for passwords — much harder to brute
+//     force than a single SHA-256 pass. (Previous versions used plain
+//     SHA-256, which is fast and unsafe for password storage.)
+//   - The hash format includes the iteration count so it can be raised in
+//     the future without breaking existing accounts (re-hash on next login).
 
 export interface Account {
   id: string               // userId (random, not the email)
   email: string            // login identifier
   name?: string            // display name (stored in user's DB, not platform)
-  passwordHash: string     // SHA-256(salt + password) — never store plaintext
-  salt: string             // per-user salt
+  passwordHash: string     // pbkdf2$<iter>$<saltHex>$<hashHex> — never store plaintext
+  salt: string             // per-user salt (legacy field; also embedded in passwordHash for new accounts)
   createdAt: string
   lastSeen: string
   consent: ConsentRecord
@@ -55,27 +64,105 @@ const ACCOUNTS_KEY = 'hubforge.accounts'
 const SESSION_KEY = 'hubforge.session'
 
 // ───────────────────────────────────────────────────────────────────────────
-// Password hashing (Web Crypto API — no external deps)
+// Password hashing (PBKDF2 via Web Crypto API — no external deps)
+//
+// Storage format: `pbkdf2$<iterations>$<saltHex>$<hashHex>`
+//   - iterations: tunable work factor (raised over time)
+//   - saltHex: 16-byte per-user random salt
+//   - hashHex: 32-byte derived key
+//
+// Why PBKDF2 and not bcrypt/argon2?
+//   - Web Crypto ships PBKDF2 natively in every modern browser and Node
+//     runtime (no native module, no WASM payload, no extra dependency).
+//   - 150k iterations of SHA-256 puts each guess at ~50-100ms on commodity
+//     hardware — sufficient resistance for a low-stakes, serverless-friendly
+//     identity layer. If we ever need stronger protection, swap the algorithm
+//     and re-hash on next login (the iteration count is stored in the hash).
 // ───────────────────────────────────────────────────────────────────────────
 
-async function hashPassword(password: string, salt: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(salt + password)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+const PBKDF2_ITERATIONS = 150_000
+const PBKDF2_KEY_LENGTH = 32 // bytes -> 64 hex chars
+
+function toHex(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf)
+  let out = ''
+  for (let i = 0; i < bytes.length; i++) out += bytes[i].toString(16).padStart(2, '0')
+  return out
+}
+
+function fromHex(hex: string): Uint8Array {
+  const arr = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < arr.length; i++) arr[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16)
+  return arr
+}
+
+async function derivePbkdf2(password: string, salt: Uint8Array, iterations: number): Promise<string> {
+  const enc = new TextEncoder()
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveBits'],
+  )
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: salt as BufferSource, iterations, hash: 'SHA-256' },
+    keyMaterial,
+    PBKDF2_KEY_LENGTH * 8,
+  )
+  return toHex(bits)
+}
+
+async function hashPassword(password: string, saltHex: string): Promise<string> {
+  const salt = fromHex(saltHex)
+  const hash = await derivePbkdf2(password, salt, PBKDF2_ITERATIONS)
+  return `pbkdf2$${PBKDF2_ITERATIONS}$${saltHex}$${hash}`
+}
+
+/**
+ * Verify a password against a stored hash. Supports:
+ *   - Current format: `pbkdf2$<iter>$<saltHex>$<hashHex>`
+ *   - Legacy format: a bare 64-char hex SHA-256 (single iteration, no salt
+ *     prefix). Used by accounts created before PBKDF2 was introduced. We
+ *     keep verifying them (using the stored `salt` field) so users aren't
+ *     locked out, but the next signup/password change always writes PBKDF2.
+ */
+async function verifyPassword(password: string, stored: string, legacySalt: string): Promise<boolean> {
+  if (stored.startsWith('pbkdf2$')) {
+    const [, iterStr, saltHex, hashHex] = stored.split('$')
+    const iterations = parseInt(iterStr, 10)
+    if (!iterations || !saltHex || !hashHex) return false
+    const salt = fromHex(saltHex)
+    const candidate = await derivePbkdf2(password, salt, iterations)
+    // Constant-time-ish compare: XOR each byte. (crypto.subtle doesn't ship
+    // a constant-time compare; we emulate by comparing equal-length hex
+    // strings after XOR — good enough for an offline attack scenario where
+    // the attacker doesn't get timing feedback anyway.)
+    if (candidate.length !== hashHex.length) return false
+    let diff = 0
+    for (let i = 0; i < candidate.length; i++) diff |= candidate.charCodeAt(i) ^ hashHex.charCodeAt(i)
+    return diff === 0
+  }
+  // Legacy SHA-256(salt + password) fallback.
+  try {
+    const enc = new TextEncoder()
+    const buf = await crypto.subtle.digest('SHA-256', enc.encode(legacySalt + password))
+    const candidate = toHex(buf)
+    if (candidate.length !== stored.length) return false
+    let diff = 0
+    for (let i = 0; i < candidate.length; i++) diff |= candidate.charCodeAt(i) ^ stored.charCodeAt(i)
+    return diff === 0
+  } catch {
+    return false
+  }
 }
 
 function generateSalt(): string {
   const arr = new Uint8Array(16)
   crypto.getRandomValues(arr)
-  return Array.from(arr).map((b) => b.toString(16).padStart(2, '0')).join('')
+  return toHex(arr)
 }
 
 function generateUserId(): string {
   const arr = new Uint8Array(8)
   crypto.getRandomValues(arr)
-  return 'u-' + Array.from(arr).map((b) => b.toString(16).padStart(2, '0')).join('')
+  return 'u-' + toHex(arr)
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -154,7 +241,9 @@ export async function signup(params: SignupParams): Promise<SignupResult> {
 
   // Validate
   if (!email || !email.includes('@')) return { success: false, error: 'Valid email is required' }
-  if (!password || password.length < 6) return { success: false, error: 'Password must be at least 6 characters' }
+  if (email.length > 254) return { success: false, error: 'Email is too long' }
+  if (!password || password.length < 8) return { success: false, error: 'Password must be at least 8 characters' }
+  if (password.length > 256) return { success: false, error: 'Password is too long' }
   if (!consent.termsAccepted) return { success: false, error: 'You must accept the Terms of Service' }
   if (!consent.privacyPolicyAccepted) return { success: false, error: 'You must accept the Privacy Policy' }
 
@@ -214,15 +303,27 @@ export interface LoginParams {
 export async function login(params: LoginParams): Promise<SignupResult> {
   const { email, password } = params
   if (!email || !password) return { success: false, error: 'Email and password are required' }
+  if (email.length > 254 || password.length > 256) return { success: false, error: 'Invalid credentials' }
 
   const account = findLocalAccount(email)
   if (!account) {
     return { success: false, error: 'No account found with this email. Try signing up.' }
   }
 
-  const passwordHash = await hashPassword(password, account.salt)
-  if (passwordHash !== account.passwordHash) {
+  const ok = await verifyPassword(password, account.passwordHash, account.salt)
+  if (!ok) {
     return { success: false, error: 'Incorrect password' }
+  }
+
+  // Upgrade: if the account is on the legacy SHA-256 hash, re-hash with
+  // PBKDF2 so we phase out the weaker scheme over time.
+  if (!account.passwordHash.startsWith('pbkdf2$')) {
+    try {
+      const newHash = await hashPassword(password, account.salt)
+      account.passwordHash = newHash
+    } catch {
+      // Non-fatal: keep the legacy hash if PBKDF2 re-hash fails.
+    }
   }
 
   // Update last seen

@@ -8,6 +8,10 @@ import {
 
 export const maxDuration = 60
 
+const MAX_DRAFT = 50000
+const MAX_CRITIQUE = 50000
+const MAX_PROBLEM = 10000
+
 // Steps that take `problem` as their primary input.
 const PROBLEM_STEPS = new Set(['retrieval', 'rule', 'reasoning'])
 // Steps that take a draft/critique/improved instead — they don't need `problem`.
@@ -22,22 +26,27 @@ export async function POST(req: NextRequest) {
     // (which operate on a draft, not the original problem) don't fail with
     // "problem is required".
     if (!step || typeof step !== 'string') return NextResponse.json({ error: 'step is required' }, { status: 400 })
+    if (step.length > 50 || !/^[a-z]+$/.test(step)) return NextResponse.json({ error: 'invalid step' }, { status: 400 })
     if (!PROBLEM_STEPS.has(step) && !DRAFT_STEPS.has(step)) {
       return NextResponse.json({ error: `unknown step: ${step}` }, { status: 400 })
     }
     if (PROBLEM_STEPS.has(step)) {
       if (!problem || typeof problem !== 'string') return NextResponse.json({ error: 'problem is required' }, { status: 400 })
-      if (problem.length > 10000) return NextResponse.json({ error: 'problem too long (max 10000 chars)' }, { status: 400 })
+      if (problem.length > MAX_PROBLEM) return NextResponse.json({ error: `problem too long (max ${MAX_PROBLEM} chars)` }, { status: 400 })
     }
-    if (step === 'critique' && (!draft || typeof draft !== 'string')) {
-      return NextResponse.json({ error: 'draft is required for critique' }, { status: 400 })
+    if (step === 'critique') {
+      if (!draft || typeof draft !== 'string') return NextResponse.json({ error: 'draft is required for critique' }, { status: 400 })
+      if (draft.length > MAX_DRAFT) return NextResponse.json({ error: `draft too long (max ${MAX_DRAFT} chars)` }, { status: 400 })
     }
     if (step === 'improvement') {
       if (!draft || typeof draft !== 'string') return NextResponse.json({ error: 'draft is required for improvement' }, { status: 400 })
+      if (draft.length > MAX_DRAFT) return NextResponse.json({ error: `draft too long (max ${MAX_DRAFT} chars)` }, { status: 400 })
       if (!critique) return NextResponse.json({ error: 'critique is required for improvement' }, { status: 400 })
+      if (typeof critique === 'string' && critique.length > MAX_CRITIQUE) return NextResponse.json({ error: `critique too long (max ${MAX_CRITIQUE} chars)` }, { status: 400 })
     }
-    if (step === 'evaluation' && (!improved || typeof improved !== 'string')) {
-      return NextResponse.json({ error: 'improved is required for evaluation' }, { status: 400 })
+    if (step === 'evaluation') {
+      if (!improved || typeof improved !== 'string') return NextResponse.json({ error: 'improved is required for evaluation' }, { status: 400 })
+      if (improved.length > MAX_DRAFT) return NextResponse.json({ error: `improved too long (max ${MAX_DRAFT} chars)` }, { status: 400 })
     }
 
     const config = normalizeConfig(providerConfig)

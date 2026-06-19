@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
       providerConfig?: ProviderConfig
     }
 
-    if (!problem) return NextResponse.json({ error: 'problem is required' }, { status: 400 })
+    if (!problem || typeof problem !== 'string') return NextResponse.json({ error: 'problem is required' }, { status: 400 })
+    if (problem.length > 10000) return NextResponse.json({ error: 'problem too long (max 10000 chars)' }, { status: 400 })
 
     const result = await webSearchEngine(providerConfig || { provider: 'zai' }, problem, decomposition)
     return NextResponse.json(result)

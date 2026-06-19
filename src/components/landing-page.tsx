@@ -367,7 +367,7 @@ export function LandingPage({ onLaunch, onSignIn }: LandingPageProps) {
           <img src="/hubforge-os-icon.png" alt="HubForge OS" className="h-16 w-16 rounded-xl shadow-lg mx-auto mb-6" />
           <h2 className="text-3xl font-bold mb-3">Ready to build your first program?</h2>
           <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Free forever. No signup required. Works offline as a PWA.
+            Free forever. Create an account to save your programs. Works offline as a PWA.
           </p>
           <Button onClick={onLaunch} size="lg" className="gap-2 bg-amber-600 hover:bg-amber-700 text-white h-12 px-10 text-base">
             Launch HubForge OS <ArrowRight className="h-4 w-4" />

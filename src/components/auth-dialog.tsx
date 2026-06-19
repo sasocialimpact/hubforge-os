@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import {
   signup, login, logout, exportAccountData, deleteAccount,
+  getDisplayEmail, getInitials,
   type SignupParams,
 } from '@/lib/auth'
 
@@ -134,7 +135,7 @@ export function AuthDialog({ open, onOpenChange, initialMode = 'signup', onAuthC
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="At least 6 characters"
+                      placeholder="At least 8 characters"
                       className="text-sm h-10 pr-9"
                     />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -202,7 +203,7 @@ export function AuthDialog({ open, onOpenChange, initialMode = 'signup', onAuthC
 
               <Button
                 onClick={handleSignup}
-                disabled={loading || !email || password.length < 6 || !consent.termsAccepted || !consent.privacyPolicyAccepted}
+                disabled={loading || !email || password.length < 8 || !consent.termsAccepted || !consent.privacyPolicyAccepted}
                 className="w-full h-10 gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
               >
                 {loading ? 'Creating…' : <><Check className="h-4 w-4" /> Create account</>}
@@ -333,10 +334,14 @@ export function AuthDialog({ open, onOpenChange, initialMode = 'signup', onAuthC
               <div className="rounded-lg border border-border p-3 space-y-2">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-sm">
-                    {email.split('@')[0].substring(0, 2).toUpperCase()}
+                    {getInitials()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{email}</div>
+                    {/* Use the live session email (not the local form state,
+                        which is empty when this dialog opens from the header
+                        avatar click). Falls back to the form email if the
+                        user is mid-typing in signup/login mode. */}
+                    <div className="text-sm font-medium truncate">{getDisplayEmail() || email || 'Account'}</div>
                     <Badge variant="outline" className="text-[9px] mt-0.5">Device identity</Badge>
                   </div>
                 </div>

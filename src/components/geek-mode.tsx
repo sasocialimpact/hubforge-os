@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   Play, RotateCcw, Check, Cpu, Zap, Sliders, Database, Code2, RefreshCw, X, Eye,
   GitBranch, CheckCircle2, Copy, Plus, Trash2, Edit3, Download, Upload, GitCompare,
-  FileText, ChevronRight, AlertCircle, Clock, DollarSign,
+  FileText, ChevronRight, AlertCircle, Clock, DollarSign, Search,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -21,6 +21,7 @@ import { EnginePipeline, type EngineState, type EngineStatus } from '@/component
 import { ENGINE_DEFS, type EngineId, type TimelineEvent } from '@/lib/types'
 import { socialImpactPackMeta, EXAMPLE_PROBLEMS } from '@/lib/social-impact-pack'
 import { socialImpactPack } from '@/lib/knowledge'
+import { getEnginePrompt, ENGINE_IDS, type EnginePromptInfo } from '@/lib/engines'
 import { PROVIDERS, type ProviderConfig, type ProviderId, getStoredProviderConfig } from '@/lib/providers'
 import { cn } from '@/lib/utils'
 import {
@@ -625,140 +626,26 @@ function ModelComparison({ problem }: { problem: string }) {
 // ============================================================
 function PromptInspector() {
   const [selectedEngine, setSelectedEngine] = useState<string>('supervisor')
+  const [view, setView] = useState<'system' | 'user'>('system')
 
-  const enginePrompts: Record<string, { system: string; user: string; description: string }> = {
-    supervisor: {
-      description: 'Decomposes the problem into objectives, scope, stakeholders. Asks clarifying questions.',
-      system: `You are the SUPERVISOR ENGINE of HubForge OS, a recursive reasoning operating system.
-Your job: (1) decompose the user's problem into a structured brief, and (2) identify what critical information is MISSING by asking clarifying questions.
-
-Respond with VALID JSON ONLY. Shape:
-{
-  "problemStatement": "...",
-  "objectives": ["..."],
-  "scope": "...",
-  "stakeholders": [{"role": "...", "description": "..."}],
-  "keyConsiderations": ["..."],
-  "suggestedFrameworks": ["..."],
-  "clarifyingQuestions": [
-    {"id": "q1", "question": "...", "why": "...", "defaultAssumption": "..."}
-  ]
-}`,
-      user: `Decompose this problem for the [DOMAIN] domain:
-
-[USER PROBLEM]
-
-Available frameworks:
-[FRAMEWORK LIST]`,
-    },
-    reasoning: {
-      description: 'Generates the draft strategy using retrieved knowledge, web search, and org context.',
-      system: `You are the REASONING ENGINE of HubForge OS, operating with the Social Impact Pack.
-Your task is to produce an expert-grade draft response to the user's problem using the retrieved knowledge.
-
-REQUIREMENTS:
-1. Ground every empirical claim in the Evidence Library or Historical Memory.
-2. Apply the retrieved Frameworks explicitly.
-3. Satisfy every Decision Rule.
-4. Use the Reasoning Patterns to structure your analysis.
-5. Be specific. Replace vague outputs with measurable targets.
-6. Output in well-structured Markdown with clear ## sections.`,
-      user: `# PROBLEM
-[USER PROBLEM]
-
-# RETRIEVED KNOWLEDGE
-## Frameworks
-[FRAMEWORK DETAILS]
-
-## Decision Rules
-[RULE DETAILS]
-
-## Evidence Library
-[EVIDENCE]
-
-## Historical Memory
-[PAST CASES]
-
-## Live Web Research
-[WEB SEARCH RESULTS]
-
-## Organization Context
-[ORG PROFILE]
-
-# TASK
-Produce the best expert-grade draft response you can.`,
-    },
-    critique: {
-      description: 'Reviews the draft for weak assumptions, missing evidence, vague targets.',
-      system: `You are the CRITIQUE ENGINE of HubForge OS.
-Find weaknesses in the draft using the Improvement Heuristics. Be rigorous and specific.
-
-Respond with VALID JSON ONLY:
-{
-  "issues": [{"severity": "high|medium|low", "heuristic": "<name>", "description": "<what is wrong>"}],
-  "summary": "<overall quality>"
-}`,
-      user: `Critique this draft:
-
-[DRAFT TEXT]`,
-    },
-    improvement: {
-      description: 'Rewrites the draft to fix every critique issue while preserving strengths.',
-      system: `You are the IMPROVEMENT ENGINE of HubForge OS.
-You receive a draft and a critique. Produce an IMPROVED draft that fixes every critique issue while preserving strengths.`,
-      user: `# DRAFT TO IMPROVE
-[DRAFT]
-
-# CRITIQUE TO ADDRESS
-[ISSUE LIST]
-
-# TASK
-Produce the improved draft.`,
-    },
-    evaluation: {
-      description: 'Scores the improved draft on a 6-criterion rubric (0-100).',
-      system: `You are the EVALUATION ENGINE of HubForge OS.
-Score the draft against the rubric. Each criterion 0-100.
-
-Respond with VALID JSON ONLY:
-{"scores": [{"criterion": "...", "score": <0-100>, "weight": <w>, "rationale": "..."}], "overall": <weighted avg>, "notes": "..."}`,
-      user: `Score this draft:
-
-[DRAFT TEXT]
-
-Rubric:
-- Evidence Base (weight 0.2)
-- Measurability/SMART (weight 0.2)
-- Feasibility (weight 0.2)
-- Stakeholder Coverage (weight 0.15)
-- Causal Logic (weight 0.15)
-- Risk & Assumption Awareness (weight 0.1)
-
-Threshold: 80`,
-    },
-    structure: {
-      description: 'Extracts Theory of Change and Logframe from the final strategy document.',
-      system: `You are the STRUCTURE ENGINE of HubForge OS. Extract a Theory of Change from the strategy document and return VALID JSON ONLY:
-{"targetPopulation": "...", "inputs": ["..."], "activities": ["..."], "outputs": ["..."], "outcomes": ["..."], "impact": "...", "assumptions": ["..."], "externalFactors": ["..."]}`,
-      user: `Extract the Theory of Change from:
-
-[FINAL DRAFT]`,
-    },
-  }
-
-  const current = enginePrompts[selectedEngine]
+  // Get the ACTUAL prompts from engines.ts — no stale copies.
+  const current: EnginePromptInfo | null = getEnginePrompt(selectedEngine, socialImpactPack)
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-mono flex items-center gap-2"><FileText className="h-4 w-4 text-amber-600" /> prompt inspector</CardTitle>
-          <p className="text-xs text-muted-foreground">See the actual system and user prompts sent to the LLM for each engine. This is what the AI sees.</p>
+          <CardTitle className="text-sm font-mono flex items-center gap-2">
+            <FileText className="h-4 w-4 text-amber-600" /> prompt inspector
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            The actual system + user prompts sent to the LLM for each engine. Live from <code className="bg-muted px-1 rounded">engines.ts</code> — no stale copies.
+          </p>
         </CardHeader>
         <CardContent>
-          {/* Engine selector */}
+          {/* Engine selector — all 10 engines */}
           <div className="flex flex-wrap gap-1.5 mb-4">
-            {Object.keys(enginePrompts).map(engine => (
+            {ENGINE_IDS.map(engine => (
               <button key={engine} onClick={() => setSelectedEngine(engine)}
                 className={cn('px-2.5 py-1.5 rounded-md text-xs border transition-all capitalize',
                   selectedEngine === engine ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 font-medium' : 'border-border hover:border-amber-500/50')}>
@@ -767,43 +654,78 @@ Threshold: 80`,
             ))}
           </div>
 
-          {/* Description */}
-          <div className="mb-3 p-2 rounded-md bg-muted/30 border border-border">
-            <p className="text-xs text-muted-foreground">{current.description}</p>
-          </div>
+          {current ? (
+            <>
+              {/* Engine meta — description + version + inputs + outputs */}
+              <div className="mb-3 p-3 rounded-md bg-muted/30 border border-border space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-medium">{current.engineName}</span>
+                  <Badge variant="outline" className="text-[8px] font-mono">v{current.version}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">{current.description}</p>
+                {current.inputs.length > 0 && (
+                  <div className="text-[10px] text-muted-foreground">
+                    <span className="font-mono uppercase">Inputs:</span>{' '}
+                    {current.inputs.map((inp, i) => (
+                      <span key={i}>
+                        <code className="bg-background px-1 rounded">{inp}</code>
+                        {i < current.inputs.length - 1 ? ', ' : ''}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {current.outputs && (
+                  <div className="text-[10px] text-muted-foreground">
+                    <span className="font-mono uppercase">Output:</span> <code className="bg-background px-1 rounded">{current.outputs}</code>
+                  </div>
+                )}
+              </div>
 
-          {/* System prompt */}
-          <div className="mb-3">
-            <div className="flex items-center justify-between mb-1">
-              <Label className="text-xs flex items-center gap-1"><Cpu className="h-3 w-3" /> System prompt</Label>
-              <Button variant="ghost" size="sm" className="text-[10px] gap-1 h-6" onClick={() => navigator.clipboard?.writeText(current.system)}>
-                <Copy className="h-3 w-3" /> Copy
-              </Button>
+              {/* View toggle: System vs User prompt */}
+              <div className="flex gap-1 mb-2">
+                <button onClick={() => setView('system')}
+                  className={cn('px-2.5 py-1 rounded-md text-xs border transition-all',
+                    view === 'system' ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 font-medium' : 'border-border')}>
+                  <Cpu className="h-3 w-3 inline mr-1" /> System prompt
+                </button>
+                <button onClick={() => setView('user')}
+                  className={cn('px-2.5 py-1 rounded-md text-xs border transition-all',
+                    view === 'user' ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 font-medium' : 'border-border')}>
+                  <FileText className="h-3 w-3 inline mr-1" /> User prompt template
+                </button>
+              </div>
+
+              {/* Prompt content */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-xs">
+                    {view === 'system' ? 'System prompt (sets the AI role + rules)' : 'User prompt template ([BRACKETS] filled at runtime)'}
+                  </Label>
+                  <Button variant="ghost" size="sm" className="text-[10px] gap-1 h-6"
+                    onClick={() => navigator.clipboard?.writeText(view === 'system' ? current.systemPrompt : current.userPromptTemplate)}>
+                    <Copy className="h-3 w-3" /> Copy
+                  </Button>
+                </div>
+                <ScrollArea className="h-[280px]">
+                  <pre className="text-[10px] font-mono whitespace-pre-wrap break-words p-3 bg-muted/30 rounded-md border border-border">
+                    {view === 'system' ? current.systemPrompt : current.userPromptTemplate}
+                  </pre>
+                </ScrollArea>
+              </div>
+
+              <div className="mt-3 p-2 rounded-md bg-amber-50/50 dark:bg-amber-950/20 border border-amber-500/20">
+                <p className="text-[10px] text-muted-foreground">
+                  <strong className="text-amber-700 dark:text-amber-400">How to edit:</strong> Prompts live in <code className="bg-muted px-1 rounded">src/lib/engines.ts</code>.
+                  The <code className="bg-muted px-1 rounded">[BRACKETED]</code> parts are replaced at runtime with actual data (problem text, retrieved knowledge, org profile, etc.).
+                  Version is tracked in <code className="bg-muted px-1 rounded">PROMPT_VERSIONS</code>.
+                </p>
+              </div>
+            </>
+          ) : (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              Unknown engine: {selectedEngine}
             </div>
-            <ScrollArea className="h-[200px]">
-              <pre className="text-[10px] font-mono whitespace-pre-wrap break-words p-3 bg-muted/30 rounded-md border border-border">{current.system}</pre>
-            </ScrollArea>
-          </div>
-
-          {/* User prompt */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label className="text-xs flex items-center gap-1"><FileText className="h-3 w-3" /> User prompt</Label>
-              <Button variant="ghost" size="sm" className="text-[10px] gap-1 h-6" onClick={() => navigator.clipboard?.writeText(current.user)}>
-                <Copy className="h-3 w-3" /> Copy
-              </Button>
-            </div>
-            <ScrollArea className="h-[200px]">
-              <pre className="text-[10px] font-mono whitespace-pre-wrap break-words p-3 bg-muted/30 rounded-md border border-border">{current.user}</pre>
-            </ScrollArea>
-          </div>
-
-          <div className="mt-3 p-2 rounded-md bg-amber-50/50 dark:bg-amber-950/20 border border-amber-500/20">
-            <p className="text-[10px] text-muted-foreground">
-              <strong className="text-amber-700 dark:text-amber-400">Note:</strong> Prompts are defined in <code className="bg-muted px-1 rounded">src/lib/engines.ts</code>.
-              The [BRACKETED] parts are replaced with actual data at runtime (problem text, retrieved knowledge, org profile, etc.).
-            </p>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -815,22 +737,72 @@ Threshold: 80`,
 // ============================================================
 function KnowledgePackEditor() {
   const [section, setSection] = useState<'frameworks' | 'rules' | 'evidence' | 'memory' | 'patterns' | 'heuristics' | 'rubric'>('frameworks')
+  const [search, setSearch] = useState('')
+  const [expandedItem, setExpandedItem] = useState<number | null>(null)
   const [customItems, setCustomItems] = useState<Record<string, any[]>>({
     frameworks: [], rules: [], evidence: [], memory: [], patterns: [], heuristics: [],
   })
 
+  // Full-detail item maps (not just name+desc) for the expanded view.
+  const fullItems: Record<string, any[]> = {
+    frameworks: socialImpactPack.frameworks.map(f => ({
+      name: f.name, desc: f.description, details: [
+        { label: 'When to use', value: (f as any).whenToUse || '—' },
+        { label: 'Key elements', value: Array.isArray((f as any).keyElements) ? (f as any).keyElements.join(', ') : '—' },
+      ],
+    })),
+    rules: socialImpactPack.decisionRules.map(r => ({
+      name: r.name, desc: (r as any).check || r.name, details: [
+        { label: 'Pass condition', value: (r as any).passCondition || '—' },
+        { label: 'Fail action', value: (r as any).failAction || '—' },
+      ],
+    })),
+    evidence: socialImpactPack.evidence.map(e => ({
+      name: e.title, desc: (e as any).summary || '', details: [
+        { label: 'Type', value: (e as any).type || '—' },
+        { label: 'Source', value: (e as any).source || '—' },
+      ],
+    })),
+    memory: socialImpactPack.historicalMemory.map(m => ({
+      name: (m as any).problem || (m as any).title || 'Case', desc: (m as any).lesson || (m as any).outcome || '', details: [
+        { label: 'Context', value: (m as any).context || '—' },
+        { label: 'Approach', value: (m as any).approach || '—' },
+      ],
+    })),
+    patterns: socialImpactPack.reasoningPatterns.map(p => ({
+      name: p.name, desc: (p as any).description || '', details: [],
+    })),
+    heuristics: socialImpactPack.improvementHeuristics.map(h => ({
+      name: h.name, desc: (h as any).description || '', details: [],
+    })),
+    rubric: socialImpactPack.evaluationCriteria.map(c => ({
+      name: (c as any).criterion || (c as any).name || 'Criterion', desc: (c as any).description || '', details: [
+        { label: 'Weight', value: `${((c as any).weight * 100).toFixed(0)}%` },
+      ],
+    })),
+  }
+
   const sections = [
-    { id: 'frameworks' as const, label: 'Frameworks', count: socialImpactPack.frameworks.length, items: socialImpactPack.frameworks.map(f => ({ name: f.name, desc: f.description })) },
-    { id: 'rules' as const, label: 'Decision Rules', count: socialImpactPack.decisionRules.length, items: socialImpactPack.decisionRules.map(r => ({ name: r.name, desc: r.check })) },
-    { id: 'evidence' as const, label: 'Evidence', count: socialImpactPack.evidence.length, items: socialImpactPack.evidence.map(e => ({ name: e.title, desc: e.summary })) },
-    { id: 'memory' as const, label: 'Historical Memory', count: socialImpactPack.historicalMemory.length, items: socialImpactPack.historicalMemory.map(m => ({ name: m.problem, desc: m.lesson })) },
-    { id: 'patterns' as const, label: 'Reasoning Patterns', count: socialImpactPack.reasoningPatterns.length, items: socialImpactPack.reasoningPatterns.map(p => ({ name: p.name, desc: p.description })) },
-    { id: 'heuristics' as const, label: 'Improvement Heuristics', count: socialImpactPack.improvementHeuristics.length, items: socialImpactPack.improvementHeuristics.map(h => ({ name: h.name, desc: h.description })) },
-    { id: 'rubric' as const, label: 'Evaluation Rubric', count: socialImpactPack.evaluationCriteria.length, items: socialImpactPack.evaluationCriteria.map(c => ({ name: c.criterion, desc: `Weight: ${c.weight} - ${c.description}` })) },
+    { id: 'frameworks' as const, label: 'Frameworks', count: fullItems.frameworks.length },
+    { id: 'rules' as const, label: 'Decision Rules', count: fullItems.rules.length },
+    { id: 'evidence' as const, label: 'Evidence', count: fullItems.evidence.length },
+    { id: 'memory' as const, label: 'Historical Memory', count: fullItems.memory.length },
+    { id: 'patterns' as const, label: 'Reasoning Patterns', count: fullItems.patterns.length },
+    { id: 'heuristics' as const, label: 'Improvement Heuristics', count: fullItems.heuristics.length },
+    { id: 'rubric' as const, label: 'Evaluation Rubric', count: fullItems.rubric.length },
   ]
 
   const current = sections.find(s => s.id === section)!
-  const customCount = customItems[section]?.length || 0
+  const allItems = [...(fullItems[section] || []), ...(customItems[section] || []).map((c: any) => ({ ...c, custom: true }))]
+
+  // Filter by search query
+  const filtered = search
+    ? allItems.filter(item => {
+        const q = search.toLowerCase()
+        return item.name?.toLowerCase().includes(q) || item.desc?.toLowerCase().includes(q) ||
+          item.details?.some((d: any) => d.value?.toLowerCase().includes(q))
+      })
+    : allItems
 
   const addItem = () => {
     const name = prompt('Item name:')
@@ -838,7 +810,7 @@ function KnowledgePackEditor() {
     const desc = prompt('Description:')
     setCustomItems(prev => ({
       ...prev,
-      [section]: [...(prev[section] || []), { name, desc: desc || '' }],
+      [section]: [...(prev[section] || []), { name, desc: desc || '', custom: true }],
     }))
   }
 
@@ -877,8 +849,10 @@ function KnowledgePackEditor() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-sm font-mono flex items-center gap-2"><Database className="h-4 w-4 text-amber-600" /> knowledge pack editor</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">View, inspect, and extend the Social Impact Pack knowledge graph.</p>
+              <CardTitle className="text-sm font-mono flex items-center gap-2"><Database className="h-4 w-4 text-amber-600" /> knowledge graph</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                The Social Impact Pack's 8-layer knowledge graph. Click any item to see full details. Search across all fields.
+              </p>
             </div>
             <div className="flex gap-1.5">
               <Button variant="outline" size="sm" className="text-xs gap-1" onClick={exportPack}>
@@ -889,14 +863,30 @@ function KnowledgePackEditor() {
         </CardHeader>
         <CardContent>
           {/* Section tabs */}
-          <div className="flex flex-wrap gap-1.5 mb-4">
+          <div className="flex flex-wrap gap-1.5 mb-3">
             {sections.map(s => (
-              <button key={s.id} onClick={() => setSection(s.id)}
+              <button key={s.id} onClick={() => { setSection(s.id); setExpandedItem(null); setSearch('') }}
                 className={cn('px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-colors flex items-center gap-1.5',
                   section === s.id ? 'bg-amber-500 text-white' : 'bg-muted hover:bg-muted/70')}>
                 {s.label} <span className="opacity-60">({s.count + (customItems[s.id]?.length || 0)})</span>
               </button>
             ))}
+          </div>
+
+          {/* Search */}
+          <div className="relative mb-3">
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={`Search ${current.label.toLowerCase()}…`}
+              className="text-xs h-8 pl-8"
+            />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
 
           {/* Add button */}
@@ -906,42 +896,61 @@ function KnowledgePackEditor() {
             </Button>
           )}
 
-          {/* Built-in items */}
-          <ScrollArea className="h-[350px] pr-2">
-            <div className="space-y-2">
-              {/* Built-in items */}
-              {current.items.map((item, i) => (
-                <div key={i} className="rounded-md border border-border p-3 group">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium truncate">{item.name}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{item.desc}</div>
-                    </div>
-                    <Badge variant="outline" className="text-[9px] font-mono shrink-0 text-muted-foreground">built-in</Badge>
-                  </div>
-                </div>
-              ))}
+          {/* Items */}
+          <ScrollArea className="h-[400px] pr-2">
+            <div className="space-y-1.5">
+              {filtered.map((item, i) => {
+                const isExpanded = expandedItem === i
+                return (
+                  <div key={i} className={cn(
+                    'rounded-md border transition-all',
+                    isExpanded ? 'border-amber-500/40 bg-amber-50/20 dark:bg-amber-950/10' : 'border-border hover:border-amber-500/30',
+                    item.custom && 'border-amber-500/30 bg-amber-50/20 dark:bg-amber-950/10'
+                  )}>
+                    <button
+                      onClick={() => setExpandedItem(isExpanded ? null : i)}
+                      className="w-full text-left p-2.5 flex items-start gap-2"
+                    >
+                      <ChevronRight className={cn('h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5 transition-transform', isExpanded && 'rotate-90')} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium truncate">{item.name}</div>
+                        <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{item.desc}</div>
+                      </div>
+                      {item.custom ? (
+                        <Badge className="text-[8px] bg-amber-600 shrink-0">custom</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[8px] font-mono shrink-0 text-muted-foreground">built-in</Badge>
+                      )}
+                    </button>
 
-              {/* Custom items */}
-              {customItems[section]?.map((item, i) => (
-                <div key={`custom-${i}`} className="rounded-md border border-amber-500/30 p-3 group bg-amber-50/20 dark:bg-amber-950/10">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium truncate">{item.name}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{item.desc}</div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <Badge className="text-[9px] bg-amber-600">custom</Badge>
-                      <button onClick={() => removeCustomItem(i)} className="text-red-400 hover:text-red-600 p-0.5">
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    </div>
+                    {/* Expanded details */}
+                    {isExpanded && (
+                      <div className="px-2.5 pb-2.5 pl-8 space-y-1.5">
+                        {item.details?.length > 0 ? (
+                          item.details.map((d: any, di: number) => (
+                            <div key={di} className="text-[10px]">
+                              <span className="font-mono uppercase text-muted-foreground">{d.label}:</span>{' '}
+                              <span className="text-foreground">{d.value}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-[10px] text-muted-foreground italic">No additional details.</div>
+                        )}
+                        {item.custom && (
+                          <button onClick={() => removeCustomItem(i - (fullItems[section]?.length || 0))} className="text-[10px] text-red-500 hover:text-red-700 flex items-center gap-1 mt-1">
+                            <Trash2 className="h-3 w-3" /> Delete custom item
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
 
-              {current.items.length === 0 && (customItems[section]?.length || 0) === 0 && (
-                <div className="text-center py-8 text-xs text-muted-foreground">No items in this section.</div>
+              {filtered.length === 0 && (
+                <div className="text-center py-8 text-xs text-muted-foreground">
+                  {search ? `No items match "${search}"` : 'No items in this section.'}
+                </div>
               )}
             </div>
           </ScrollArea>

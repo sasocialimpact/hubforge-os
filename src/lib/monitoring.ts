@@ -148,7 +148,9 @@ export function deleteReading(indicatorId: string, readingId: string): void {
 // ───────────────────────────────────────────────────────────────────────────
 
 export function computeProgress(indicator: Indicator): number {
-  const { baseline, target, current } = indicator
+  const baseline = indicator.baseline ?? 0
+  const target = indicator.target ?? 0
+  const current = indicator.current
   if (current == null) return 0
   if (target === baseline) return current >= target ? 100 : 0
   const progress = ((current - baseline) / (target - baseline)) * 100

@@ -62,7 +62,13 @@ export async function POST(req: NextRequest) {
     const threshold = qualityThreshold ?? 80
 
     // ── Rate limit check (shared key only) ──
-    const profileId = req.headers.get('x-hubforge-profile-id') || null
+    // Profile ID is preferred (set by the dashboard on first run). If absent
+    // (e.g. third-party API caller), fall back to IP so anonymous callers
+    // share the daily quota instead of getting unlimited access.
+    const profileId = req.headers.get('x-hubforge-profile-id')
+      || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || req.headers.get('x-real-ip')
+      || 'anon'
     const rateLimit = checkRateLimit(profileId, config.provider)
     if (!rateLimit.allowed) {
       return NextResponse.json({
@@ -119,7 +125,6 @@ export async function POST(req: NextRequest) {
 
     // Record the generation for rate limiting (only shared key users).
     recordStrategyGeneration(profileId, config.provider)
-
     const durationMs = Date.now() - start
 
     return NextResponse.json({
@@ -150,10 +155,13 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (e: any) {
+    // Information disclosure: don't leak the raw error to the client.
+    // Log the full error server-side, return a generic message client-side.
     console.error('[/api/v1/reason] error:', e)
+    const isClientError = e instanceof SyntaxError // JSON.parse on bad body
     return NextResponse.json({
-      error: e?.message ?? 'Internal error',
+      error: isClientError ? 'Invalid request body' : 'Internal error',
       durationMs: Date.now() - start,
-    }, { status: 500 })
+    }, { status: isClientError ? 400 : 500 })
   }
 }
