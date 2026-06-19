@@ -64,7 +64,7 @@ export function FirstRunOnboarding({ onComplete }: { onComplete: () => void }) {
               <div className="rounded-lg border border-amber-500/30 bg-amber-50 dark:bg-amber-950/30 p-3 mb-4"><ol className="text-[11px] text-muted-foreground space-y-1 list-decimal list-inside"><li>Go to <strong>z.ai/manage/apikey</strong></li><li>Sign up (free)</li><li>Click "Create API Key"</li><li>Copy and paste below</li></ol><a href="https://z.ai/manage/apikey" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400 hover:underline font-medium"><ExternalLink className="h-3 w-3" /> Open z.ai/manage/apikey</a></div>
               <div className="space-y-2 mb-4"><Label htmlFor="zk" className="text-xs">Paste your Z.ai API key</Label><Input id="zk" type="password" value={zaiKey} onChange={(e) => setZaiKey(e.target.value)} placeholder="your-api-key-here…" className="font-mono text-sm" /></div>
               <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => setStep(1)} className="shrink-0">Back</Button><Button onClick={handleSaveZaiKey} disabled={!zaiKey.trim()} className="flex-1 gap-2 bg-amber-600 hover:bg-amber-700 text-white"><Check className="h-4 w-4" /> Save & continue</Button></div>
-              <button onClick={handleUseShared} className="mt-3 text-[10px] text-muted-foreground hover:text-amber-700 w-full text-center">Skip — use shared AI</button>
+              <button onClick={handleUseShared} className="mt-3 text-[10px] text-muted-foreground hover:text-amber-700 w-full text-center">Skip - use shared AI</button>
             </motion.div>)}
             {step === 4 && (<motion.div key="profile" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="p-6">
               <h2 className="text-lg font-bold mb-1">Tell us about yourself</h2>
@@ -79,7 +79,7 @@ export function FirstRunOnboarding({ onComplete }: { onComplete: () => void }) {
                 </div>
               </div>
               <Button onClick={handleFinish} disabled={!canContinueProfile} className="w-full mt-5 gap-2 bg-amber-600 hover:bg-amber-700 text-white"><Check className="h-4 w-4" /> Start building</Button>
-              <button onClick={handleFinish} className="mt-2 text-[10px] text-muted-foreground hover:text-amber-700 w-full text-center">Skip — continue without sharing</button>
+              <button onClick={handleFinish} className="mt-2 text-[10px] text-muted-foreground hover:text-amber-700 w-full text-center">Skip - continue without sharing</button>
             </motion.div>)}
           </AnimatePresence>
           <div className="flex justify-center gap-1.5 pb-4">{[0, 1, 4].map((s, i) => (<div key={i} className={cn('h-1.5 rounded-full transition-all', step === s ? 'w-6 bg-amber-500' : step > s ? 'w-1.5 bg-amber-500/40' : 'w-1.5 bg-muted')} />))}</div>

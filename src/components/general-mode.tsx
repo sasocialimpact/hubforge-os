@@ -85,7 +85,7 @@ export function GeneralMode({ connected, providerConfig }: { connected: boolean;
       const retrievalResult = await callRetrieval(problemText, decomp!)
       const retrieval = retrievalResult.output
 
-      // Web Search — NEW: search for demographic data, previous programs, evidence
+      // Web Search - NEW: search for demographic data, previous programs, evidence
       setProgressMsg('Researching demographics, previous programs, and evidence…')
       setProgressPhase('search')
       let webSearch: any = null
@@ -313,7 +313,7 @@ export function GeneralMode({ connected, providerConfig }: { connected: boolean;
                 <Lightbulb className="h-4 w-4 text-amber-600" />
                 <h3 className="text-sm font-bold">A few quick questions</h3>
               </div>
-              <p className="text-xs text-muted-foreground mb-4">These help us tailor the output. Skip any you're unsure about — we'll use a sensible assumption based on public evidence.</p>
+              <p className="text-xs text-muted-foreground mb-4">These help us tailor the output. Skip any you're unsure about - we'll use a sensible assumption based on public evidence.</p>
               <div className="space-y-4">
                 {questions.map((q, i) => (
                   <div key={q.id} className="rounded-lg border border-border p-3">
@@ -340,7 +340,7 @@ export function GeneralMode({ connected, providerConfig }: { connected: boolean;
                     ) : (
                       <button type="button" onClick={() => setSkipped((s) => ({ ...s, [q.id]: true }))}
                         className="mt-1.5 text-[10px] text-muted-foreground hover:text-amber-700 dark:hover:text-amber-400 inline-flex items-center gap-1">
-                        <ArrowRight className="h-3 w-3" /> Skip — use public evidence / best assumption
+                        <ArrowRight className="h-3 w-3" /> Skip - use public evidence / best assumption
                       </button>
                     )}
                   </div>
@@ -459,7 +459,7 @@ function DeliverableView({
             {ready ? <CheckCircle2 className="h-5 w-5 text-white" /> : <RefreshCw className="h-5 w-5 text-white" />}
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-bold">{ready ? 'Ready to share' : 'Good draft — a few tweaks could help'}</h3>
+            <h3 className="text-sm font-bold">{ready ? 'Ready to share' : 'Good draft - a few tweaks could help'}</h3>
             <p className="text-xs text-muted-foreground">Quality score {score}/100 {ready ? '· meets our quality threshold' : '· below 80 but still usable'}</p>
           </div>
           {/* Export dropdown */}
@@ -471,8 +471,8 @@ function DeliverableView({
               <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-border rounded-lg shadow-lg py-1 w-44">
                 <button onClick={() => { handleWord(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📄 Word (.docx)</button>
                 <button onClick={() => { handlePDF(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📄 PDF (full report)</button>
-                {hasLogframe && <button onClick={() => { handleExcelLogframe(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📊 Excel — Logframe</button>}
-                {hasToc && <button onClick={() => { handleExcelToC(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📊 Excel — Theory of Change</button>}
+                {hasLogframe && <button onClick={() => { handleExcelLogframe(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📊 Excel - Logframe</button>}
+                {hasToc && <button onClick={() => { handleExcelToC(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📊 Excel - Theory of Change</button>}
                 <button onClick={() => { handleCopy(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📋 Copy text</button>
               </div>
             )}

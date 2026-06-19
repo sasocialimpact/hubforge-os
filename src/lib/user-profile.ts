@@ -1,4 +1,4 @@
-// User profile — stored in localStorage, synced to Supabase
+// User profile - stored in localStorage, synced to Supabase
 export interface UserProfile { profileId: string; name: string; email: string; organization: string; country: string; role: string }
 const PROFILE_KEY = 'hubforge.profile'
 const PROFILE_ID_KEY = 'hubforge.profileId'

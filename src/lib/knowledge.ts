@@ -1,4 +1,4 @@
-// HubForge OS — Social Impact Pack Knowledge Base
+// HubForge OS - Social Impact Pack Knowledge Base
 // Encodes the 8-layer Knowledge Graph for the Social Impact domain.
 
 export interface Framework {
@@ -62,21 +62,21 @@ export interface DomainPack {
   version: string
   description: string
   supports: string[]
-  // Layer 1 — Domain Knowledge
+  // Layer 1 - Domain Knowledge
   domainKnowledge: string[]
-  // Layer 2 — Framework Knowledge
+  // Layer 2 - Framework Knowledge
   frameworks: Framework[]
-  // Layer 3 — Procedural Knowledge
+  // Layer 3 - Procedural Knowledge
   procedures: { name: string; steps: ProceduralStep[] }[]
-  // Layer 4 — Decision Rules
+  // Layer 4 - Decision Rules
   decisionRules: DecisionRule[]
-  // Layer 5 — Evidence Libraries
+  // Layer 5 - Evidence Libraries
   evidence: EvidenceSource[]
-  // Layer 6 — Historical Memory
+  // Layer 6 - Historical Memory
   historicalMemory: HistoricalCase[]
-  // Layer 7 — Reasoning Patterns
+  // Layer 7 - Reasoning Patterns
   reasoningPatterns: ReasoningPattern[]
-  // Layer 8 — Improvement Heuristics
+  // Layer 8 - Improvement Heuristics
   improvementHeuristics: ImprovementHeuristic[]
   // Evaluation rubric (used by Evaluation Engine)
   evaluationCriteria: EvaluationCriterion[]
@@ -279,7 +279,7 @@ export const socialImpactPack: DomainPack = {
       title: 'OECD-DAC Criteria for Evaluating Development Assistance',
       type: 'Institutional Framework',
       summary:
-        'Six criteria — relevance, coherence, effectiveness, efficiency, impact, sustainability — used to evaluate development interventions.',
+        'Six criteria - relevance, coherence, effectiveness, efficiency, impact, sustainability - used to evaluate development interventions.',
     },
     {
       title: 'Better Evaluation Rainbow Framework',
@@ -288,7 +288,7 @@ export const socialImpactPack: DomainPack = {
         'Comprehensive framework organising evaluation tasks: manage, define, frame, describe, understand causes, synthesise, report and support use.',
     },
     {
-      title: 'Innosight Institute — Theory of Change Field Guide',
+      title: 'Innosight Institute - Theory of Change Field Guide',
       type: 'Practitioner Guide',
       summary:
         'Step-by-step guidance on building theories of change, including common pitfalls (uncritical assumptions, missing links, vague outcomes).',
@@ -300,7 +300,7 @@ export const socialImpactPack: DomainPack = {
         'Reference on counterfactual impact evaluation methods including RCTs, difference-in-differences, regression discontinuity, and matching.',
     },
     {
-      title: 'CGAP — Financial Diaries of Smallholder Households',
+      title: 'CGAP - Financial Diaries of Smallholder Households',
       type: 'Empirical Study',
       summary:
         'Documents the income, expense, and shock-coping patterns of smallholder households; useful baseline for climate-adaptation program design.',

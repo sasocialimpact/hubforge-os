@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HubForge OS — Decision Intelligence Infrastructure",
+  title: "HubForge OS - Decision Intelligence Infrastructure",
   description:
     "Open-source operating system for building expert reasoning systems. Build, learn, reason, improve.",
   keywords: ["HubForge OS", "decision intelligence", "reasoning systems", "social impact", "open source"],

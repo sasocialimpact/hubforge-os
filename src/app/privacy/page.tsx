@@ -1,4 +1,4 @@
-export const metadata = { title: 'Privacy Policy — HubForge OS' }
+export const metadata = { title: 'Privacy Policy - HubForge OS' }
 
 export default function PrivacyPage() {
   return (
@@ -41,12 +41,12 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-bold mb-2">4. Your rights (GDPR / CCPA)</h2>
             <p>You have the right to:</p>
             <ul className="list-disc pl-6 space-y-1">
-              <li><strong>Access</strong> — request a copy of your data</li>
-              <li><strong>Rectification</strong> — correct inaccurate data</li>
-              <li><strong>Erasure</strong> — delete your account and all associated data</li>
-              <li><strong>Portability</strong> — export your data in JSON format</li>
-              <li><strong>Objection</strong> — opt out of analytics tracking</li>
-              <li><strong>Withdraw consent</strong> — at any time, without giving a reason</li>
+              <li><strong>Access</strong> - request a copy of your data</li>
+              <li><strong>Rectification</strong> - correct inaccurate data</li>
+              <li><strong>Erasure</strong> - delete your account and all associated data</li>
+              <li><strong>Portability</strong> - export your data in JSON format</li>
+              <li><strong>Objection</strong> - opt out of analytics tracking</li>
+              <li><strong>Withdraw consent</strong> - at any time, without giving a reason</li>
             </ul>
             <p className="mt-2">To exercise these rights, email <strong>privacy@hubforge.org</strong> (replace with your actual contact). We respond within 30 days.</p>
           </section>

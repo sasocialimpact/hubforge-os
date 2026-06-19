@@ -1,4 +1,4 @@
-export const metadata = { title: 'Help & Documentation — HubForge OS' }
+export const metadata = { title: 'Help & Documentation - HubForge OS' }
 
 export default function HelpPage() {
   return (
@@ -29,7 +29,7 @@ export default function HelpPage() {
             <div className="space-y-3">
               <div className="rounded-lg border border-border p-4">
                 <h3 className="font-bold text-sm mb-1">Strategy Document</h3>
-                <p className="text-xs text-muted-foreground">A complete written strategy with executive summary, problem analysis, objectives, stakeholder analysis, implementation plan, budget, risk management, and M&E framework. Formatted in Markdown — exportable to Word or PDF.</p>
+                <p className="text-xs text-muted-foreground">A complete written strategy with executive summary, problem analysis, objectives, stakeholder analysis, implementation plan, budget, risk management, and M&E framework. Formatted in Markdown - exportable to Word or PDF.</p>
               </div>
               <div className="rounded-lg border border-border p-4">
                 <h3 className="font-bold text-sm mb-1">Theory of Change Diagram</h3>
@@ -37,7 +37,7 @@ export default function HelpPage() {
               </div>
               <div className="rounded-lg border border-border p-4">
                 <h3 className="font-bold text-sm mb-1">Logframe Table</h3>
-                <p className="text-xs text-muted-foreground">A 4×5 logical framework: Goal, Purpose, Outputs, Activities — each with indicators (OVI), means of verification, and assumptions. Editable inline. Exportable to Excel for donor proposals.</p>
+                <p className="text-xs text-muted-foreground">A 4×5 logical framework: Goal, Purpose, Outputs, Activities - each with indicators (OVI), means of verification, and assumptions. Editable inline. Exportable to Excel for donor proposals.</p>
               </div>
               <div className="rounded-lg border border-border p-4">
                 <h3 className="font-bold text-sm mb-1">Evaluation Plan</h3>
@@ -53,13 +53,13 @@ export default function HelpPage() {
               <thead><tr className="bg-muted"><th className="p-2 text-left border border-border">Provider</th><th className="p-2 text-left border border-border">Cost</th><th className="p-2 text-left border border-border">Setup</th><th className="p-2 text-left border border-border">Best for</th></tr></thead>
               <tbody>
                 <tr><td className="p-2 border border-border font-medium">Z.ai (shared)</td><td className="p-2 border border-border">Free</td><td className="p-2 border border-border">None</td><td className="p-2 border border-border">Trying it out</td></tr>
-                <tr><td className="p-2 border border-border font-medium">Z.ai (own key)</td><td className="p-2 border border-border">Free</td><td className="p-2 border border-border">30 sec — get key at z.ai</td><td className="p-2 border border-border">Regular use (recommended)</td></tr>
-                <tr><td className="p-2 border border-border font-medium">Groq</td><td className="p-2 border border-border">Free tier</td><td className="p-2 border border-border">1 min — get key at console.groq.com</td><td className="p-2 border border-border">Fast responses</td></tr>
-                <tr><td className="p-2 border border-border font-medium">OpenAI</td><td className="p-2 border border-border">~$0.01/strategy</td><td className="p-2 border border-border">2 min — get key at platform.openai.com</td><td className="p-2 border border-border">Highest quality</td></tr>
+                <tr><td className="p-2 border border-border font-medium">Z.ai (own key)</td><td className="p-2 border border-border">Free</td><td className="p-2 border border-border">30 sec - get key at z.ai</td><td className="p-2 border border-border">Regular use (recommended)</td></tr>
+                <tr><td className="p-2 border border-border font-medium">Groq</td><td className="p-2 border border-border">Free tier</td><td className="p-2 border border-border">1 min - get key at console.groq.com</td><td className="p-2 border border-border">Fast responses</td></tr>
+                <tr><td className="p-2 border border-border font-medium">OpenAI</td><td className="p-2 border border-border">~$0.01/strategy</td><td className="p-2 border border-border">2 min - get key at platform.openai.com</td><td className="p-2 border border-border">Highest quality</td></tr>
                 <tr><td className="p-2 border border-border font-medium">Local (Ollama)</td><td className="p-2 border border-border">Free forever</td><td className="p-2 border border-border">Install Ollama, download model</td><td className="p-2 border border-border">Full privacy, offline use</td></tr>
               </tbody>
             </table>
-            <p className="text-xs text-muted-foreground mt-2">Your API key is stored only in your browser. It's sent directly to the provider — never to HubForge servers.</p>
+            <p className="text-xs text-muted-foreground mt-2">Your API key is stored only in your browser. It's sent directly to the provider - never to HubForge servers.</p>
           </section>
 
           {/* The reasoning loop */}
@@ -67,15 +67,15 @@ export default function HelpPage() {
             <h2 className="text-xl font-bold mb-3">How the reasoning works</h2>
             <p className="text-sm mb-3">HubForge OS doesn't just generate once. It runs a 9-engine loop:</p>
             <ol className="list-decimal pl-6 space-y-1 text-sm">
-              <li><strong>Supervisor</strong> — understands your problem, asks clarifying questions</li>
-              <li><strong>Retrieval</strong> — pulls frameworks (Theory of Change, Logframe) and evidence from the knowledge pack</li>
-              <li><strong>Web Search</strong> — searches the live web for demographic data, previous programs, and evidence specific to your location</li>
-              <li><strong>Rule Check</strong> — validates: SMART goals? Stakeholders named? Assumptions stated?</li>
-              <li><strong>Reasoning</strong> — drafts the strategy using all the above</li>
-              <li><strong>Critique</strong> — reviews the draft for weak assumptions, missing evidence, vague targets</li>
-              <li><strong>Improvement</strong> — rewrites to fix every issue found</li>
-              <li><strong>Evaluation</strong> — scores 0-100 on a 6-criterion rubric. If below 80, it loops again.</li>
-              <li><strong>Structure</strong> — extracts the Theory of Change and Logframe from the strategy</li>
+              <li><strong>Supervisor</strong> - understands your problem, asks clarifying questions</li>
+              <li><strong>Retrieval</strong> - pulls frameworks (Theory of Change, Logframe) and evidence from the knowledge pack</li>
+              <li><strong>Web Search</strong> - searches the live web for demographic data, previous programs, and evidence specific to your location</li>
+              <li><strong>Rule Check</strong> - validates: SMART goals? Stakeholders named? Assumptions stated?</li>
+              <li><strong>Reasoning</strong> - drafts the strategy using all the above</li>
+              <li><strong>Critique</strong> - reviews the draft for weak assumptions, missing evidence, vague targets</li>
+              <li><strong>Improvement</strong> - rewrites to fix every issue found</li>
+              <li><strong>Evaluation</strong> - scores 0-100 on a 6-criterion rubric. If below 80, it loops again.</li>
+              <li><strong>Structure</strong> - extracts the Theory of Change and Logframe from the strategy</li>
             </ol>
             <p className="text-sm mt-3">This takes 2-3 minutes. The progress indicator shows which engine is running.</p>
           </section>
@@ -97,10 +97,10 @@ export default function HelpPage() {
           <section>
             <h2 className="text-xl font-bold mb-3">Exporting your work</h2>
             <ul className="list-disc pl-6 space-y-1 text-sm">
-              <li><strong>Word (.docx)</strong> — downloads the strategy as an editable Word document</li>
-              <li><strong>PDF</strong> — downloads a formatted PDF with strategy + ToC + Logframe</li>
-              <li><strong>Excel (.xlsx)</strong> — downloads the Logframe or ToC as a spreadsheet for donor templates</li>
-              <li><strong>Copy</strong> — copies the strategy text to clipboard for pasting into proposals</li>
+              <li><strong>Word (.docx)</strong> - downloads the strategy as an editable Word document</li>
+              <li><strong>PDF</strong> - downloads a formatted PDF with strategy + ToC + Logframe</li>
+              <li><strong>Excel (.xlsx)</strong> - downloads the Logframe or ToC as a spreadsheet for donor templates</li>
+              <li><strong>Copy</strong> - copies the strategy text to clipboard for pasting into proposals</li>
             </ul>
           </section>
 
@@ -139,7 +139,7 @@ export default function HelpPage() {
               </div>
               <div>
                 <h3 className="font-bold text-sm">Can I edit the outputs?</h3>
-                <p className="text-xs text-muted-foreground">Yes. The Theory of Change and Logframe are fully editable — click any text to modify, add items with +, remove with ×.</p>
+                <p className="text-xs text-muted-foreground">Yes. The Theory of Change and Logframe are fully editable - click any text to modify, add items with +, remove with ×.</p>
               </div>
               <div>
                 <h3 className="font-bold text-sm">Is it really free?</h3>
@@ -147,7 +147,7 @@ export default function HelpPage() {
               </div>
               <div>
                 <h3 className="font-bold text-sm">Can I use it offline?</h3>
-                <p className="text-xs text-muted-foreground">The UI works offline after first visit (cached by the service worker). AI calls need internet — except if you use a local model (Ollama).</p>
+                <p className="text-xs text-muted-foreground">The UI works offline after first visit (cached by the service worker). AI calls need internet - except if you use a local model (Ollama).</p>
               </div>
               <div>
                 <h3 className="font-bold text-sm">Is my data safe?</h3>

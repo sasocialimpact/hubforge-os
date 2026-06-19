@@ -1,4 +1,4 @@
-// POST /api/interview — Supervisor Engine: decompose problem, return questions
+// POST /api/interview - Supervisor Engine: decompose problem, return questions
 import { NextRequest, NextResponse } from 'next/server'
 import { supervisorEngine, socialImpactPack, describeProvider, normalizeConfig, type ProviderConfig } from '@/lib/engine-access'
 

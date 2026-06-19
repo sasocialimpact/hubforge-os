@@ -1,4 +1,4 @@
-// POST /api/search — Web Search Engine
+// POST /api/search - Web Search Engine
 // Searches for demographic data, previous programs, and evidence.
 // Body: { problem, decomposition, providerConfig }
 // Returns: { demographic, previousPrograms, evidence, summary }

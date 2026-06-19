@@ -78,7 +78,7 @@ function TimelineRow({ event }: { event: TimelineEvent }) {
           {def?.name ?? event.engine}
           {event.iteration ? ` · iter ${event.iteration}` : ''}
         </span>
-        <span className="text-muted-foreground">— running…</span>
+        <span className="text-muted-foreground">- running…</span>
       </motion.div>
     )
   }
@@ -137,7 +137,7 @@ function TimelineRow({ event }: { event: TimelineEvent }) {
     )
   }
 
-  // engine:done row — the meat of the timeline
+  // engine:done row - the meat of the timeline
   const output = event.payload?.output
   const hasOutput = output !== undefined && output !== null
   const preview = renderPreview(event.engine!, output)
@@ -259,7 +259,7 @@ function DecompositionView({ d }: { d: any }) {
       <Field label="Stakeholders">
         <ul className="space-y-0.5">
           {(d.stakeholders ?? []).map((s: any, i: number) => (
-            <li key={i}><strong>{s.role}</strong> — {s.description}</li>
+            <li key={i}><strong>{s.role}</strong> - {s.description}</li>
           ))}
         </ul>
       </Field>
@@ -285,7 +285,7 @@ function RetrievalView({ r }: { r: any }) {
       <Field label={`Frameworks (${(r.frameworks ?? []).length})`}>
         <ul className="space-y-0.5">
           {(r.frameworks ?? []).map((f: any, i: number) => (
-            <li key={i}><strong>{f.name}</strong> — {f.description}</li>
+            <li key={i}><strong>{f.name}</strong> - {f.description}</li>
           ))}
         </ul>
       </Field>

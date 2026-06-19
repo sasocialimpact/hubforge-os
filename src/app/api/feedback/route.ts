@@ -1,4 +1,4 @@
-// POST /api/feedback — incorporate user feedback
+// POST /api/feedback - incorporate user feedback
 import { NextRequest, NextResponse } from 'next/server'
 import { feedbackEngine, evaluationEngine, structureEngine, socialImpactPack, normalizeConfig, type ProviderConfig, type OutputType } from '@/lib/engine-access'
 

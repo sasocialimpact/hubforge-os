@@ -1,4 +1,4 @@
-// POST /api/structure — extract ToC + Logframe
+// POST /api/structure - extract ToC + Logframe
 import { NextRequest, NextResponse } from 'next/server'
 import { structureEngine, normalizeConfig, type ProviderConfig, type OutputType } from '@/lib/engine-access'
 

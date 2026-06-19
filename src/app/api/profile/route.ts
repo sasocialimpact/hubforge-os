@@ -1,4 +1,4 @@
-// POST /api/profile — save/update user profile, GET — list (admin) or count (public)
+// POST /api/profile - save/update user profile, GET - list (admin) or count (public)
 import { NextRequest, NextResponse } from 'next/server'
 
 const ADMIN_KEY = process.env.HUBFORGE_ADMIN_KEY || 'hubforge-admin-2024'

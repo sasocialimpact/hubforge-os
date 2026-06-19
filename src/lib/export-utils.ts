@@ -1,4 +1,4 @@
-// Export utilities — convert HubForge outputs to Word, Excel, PDF
+// Export utilities - convert HubForge outputs to Word, Excel, PDF
 // All functions run client-side (no server needed).
 
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType, BorderStyle } from 'docx'

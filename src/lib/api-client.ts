@@ -1,4 +1,4 @@
-// API client — replaces socket.io with sequential fetch calls.
+// API client - replaces socket.io with sequential fetch calls.
 import type { ProviderConfig, OutputType, ClarifyingQuestion, StructuredOutputs, EvaluationResult, Decomposition } from './types'
 
 async function apiCall(path: string, body: any): Promise<any> {

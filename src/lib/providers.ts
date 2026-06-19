@@ -27,7 +27,7 @@ export const PROVIDERS: ProviderMeta[] = [
   {
     id: 'zai',
     label: 'Z.ai (shared, free)',
-    description: 'No setup needed. Uses a shared Z.ai account. Best for trying it out — may have usage limits.',
+    description: 'No setup needed. Uses a shared Z.ai account. Best for trying it out - may have usage limits.',
     needsKey: false,
     defaultModel: '',
     defaultBaseUrl: '',
@@ -51,7 +51,7 @@ export const PROVIDERS: ProviderMeta[] = [
   {
     id: 'groq',
     label: 'Groq (free tier)',
-    description: 'Llama 3.3, Gemma — very fast. Generous free tier. Get a key in 30 seconds.',
+    description: 'Llama 3.3, Gemma - very fast. Generous free tier. Get a key in 30 seconds.',
     needsKey: true,
     defaultModel: 'llama-3.3-70b-versatile',
     defaultBaseUrl: 'https://api.groq.com/openai/v1',

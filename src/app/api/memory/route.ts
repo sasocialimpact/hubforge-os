@@ -1,4 +1,4 @@
-// GET /api/memory — list sessions, DELETE — clear, POST — save
+// GET /api/memory - list sessions, DELETE - clear, POST - save
 import { NextRequest, NextResponse } from 'next/server'
 
 interface MemoryRecord { id: string; timestamp: string; problem: string; iterations: number; finalScore: number; thresholdMet: boolean; finalDraft: string; structuredOutputs?: any; provider?: string }

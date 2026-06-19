@@ -359,7 +359,7 @@ function PackReference() {
         <CollapsibleTrigger asChild>
           <CardHeader className="pb-3 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-900 transition-colors">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-mono flex items-center gap-2"><BookOpen className="h-4 w-4 text-amber-600" /> social impact pack — knowledge graph</CardTitle>
+              <CardTitle className="text-sm font-mono flex items-center gap-2"><BookOpen className="h-4 w-4 text-amber-600" /> social impact pack - knowledge graph</CardTitle>
               <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />
             </div>
           </CardHeader>

@@ -1,4 +1,4 @@
-export const metadata = { title: 'Terms of Service — HubForge OS' }
+export const metadata = { title: 'Terms of Service - HubForge OS' }
 
 export default function TermsPage() {
   return (

@@ -47,7 +47,7 @@ export function SettingsDialog({ open, onOpenChange, onSaved }: SettingsDialogPr
           </DialogTitle>
           <DialogDescription>
             Choose how HubForge OS powers its reasoning. The built-in Z.ai option needs no setup.
-            For everything else, bring your own API key — or run a local model for full privacy.
+            For everything else, bring your own API key - or run a local model for full privacy.
           </DialogDescription>
         </DialogHeader>
 
@@ -157,7 +157,7 @@ export function SettingsDialog({ open, onOpenChange, onSaved }: SettingsDialogPr
             {/* Privacy note */}
             <div className="rounded-lg bg-muted/50 p-3 text-[11px] text-muted-foreground leading-relaxed">
               <strong className="text-foreground">Your key stays in your browser.</strong> API keys are stored
-              only in this browser's localStorage and sent directly to your chosen provider with each request —
+              only in this browser's localStorage and sent directly to your chosen provider with each request -
               never to HubForge OS servers.
             </div>
           </div>

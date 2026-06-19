@@ -1,4 +1,4 @@
-// Analytics client — non-blocking event tracking
+// Analytics client - non-blocking event tracking
 import { getProfileId } from './user-profile'
 
 let sessionId: string | null = null

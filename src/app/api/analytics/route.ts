@@ -1,4 +1,4 @@
-// POST /api/analytics — track event, GET — dashboard data (admin)
+// POST /api/analytics - track event, GET - dashboard data (admin)
 import { NextRequest, NextResponse } from 'next/server'
 
 const ADMIN_KEY = process.env.HUBFORGE_ADMIN_KEY || 'hubforge-admin-2024'

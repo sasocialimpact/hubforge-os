@@ -1,4 +1,4 @@
-// Web Search Engine — searches the live web for demographic data, previous programs,
+// Web Search Engine - searches the live web for demographic data, previous programs,
 // and evidence specific to the user's problem.
 // Uses z-ai-web-dev-sdk's web_search function.
 

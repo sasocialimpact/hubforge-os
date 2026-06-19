@@ -1,4 +1,4 @@
-// HubForge OS — Core Intelligence Engine
+// HubForge OS - Core Intelligence Engine
 // The 8 sub-engines + provider router + interview + structured output + feedback.
 // Each engine is a thin wrapper around a routed LLM call (or a deterministic check).
 
@@ -165,7 +165,7 @@ export const OUTPUT_LABELS: Record<OutputType, { label: string; description: str
 }
 
 // ============================================================
-// Engine 1 — Supervisor Engine
+// Engine 1 - Supervisor Engine
 // Decomposes the problem AND identifies what's missing (clarifying questions).
 // ============================================================
 export interface ClarifyingQuestion {
@@ -193,13 +193,13 @@ export async function supervisorEngine(
 ): Promise<Decomposition> {
   const frameworkList = pack.frameworks.map((f) => `- ${f.name}: ${f.description}`).join('\n')
   const answersBlock = answers && Object.keys(answers).length > 0
-    ? `\n\nThe user previously answered these clarifying questions — incorporate their answers:\n${Object.entries(answers).map(([id, a]) => `- ${id}: ${a}`).join('\n')}`
+    ? `\n\nThe user previously answered these clarifying questions - incorporate their answers:\n${Object.entries(answers).map(([id, a]) => `- ${id}: ${a}`).join('\n')}`
     : ''
 
   const system = `You are the SUPERVISOR ENGINE of HubForge OS, a recursive reasoning operating system for the ${pack.name}.
 Your job: (1) decompose the user's problem into a structured brief, and (2) identify what critical information is MISSING by asking clarifying questions.
 
-Asking good questions is essential. A program officer may not be an M&E expert. Ask only what truly changes the output — 2 to 4 questions. For each, provide a sensible default assumption the system can use if the user skips it.
+Asking good questions is essential. A program officer may not be an M&E expert. Ask only what truly changes the output - 2 to 4 questions. For each, provide a sensible default assumption the system can use if the user skips it.
 
 Respond with VALID JSON ONLY. No prose, no markdown fences. Shape:
 {
@@ -239,7 +239,7 @@ ${problem}`
 }
 
 // ============================================================
-// Engine 2 — Retrieval Engine (deterministic, no LLM)
+// Engine 2 - Retrieval Engine (deterministic, no LLM)
 // ============================================================
 export interface RetrievalResult {
   frameworks: DomainPack['frameworks']
@@ -271,7 +271,7 @@ export function retrievalEngine(
 }
 
 // ============================================================
-// Engine 3 — Rule Engine (deterministic, no LLM)
+// Engine 3 - Rule Engine (deterministic, no LLM)
 // ============================================================
 export interface RuleCheckResult {
   rule: string
@@ -288,23 +288,23 @@ export function ruleEngine(problem: string, pack: DomainPack): RuleCheckResult[]
     switch (rule.name) {
       case 'SMART Goal Validation':
         passed = /\b(by|within|target|increase|reduce|%\d|%\s)/i.test(problem)
-        note = passed ? 'Problem references a measurable target or time horizon.' : 'No explicit measurable target detected — Reasoning Engine must add SMART targets.'
+        note = passed ? 'Problem references a measurable target or time horizon.' : 'No explicit measurable target detected - Reasoning Engine must add SMART targets.'
         break
       case 'Stakeholder Coverage':
         passed = /\b(farmer|beneficiar|communit|patient|student|women|youth|household|government|partner)/i.test(p)
-        note = passed ? 'At least one stakeholder group named.' : 'No stakeholder group explicitly named — Reasoning Engine must enumerate.'
+        note = passed ? 'At least one stakeholder group named.' : 'No stakeholder group explicitly named - Reasoning Engine must enumerate.'
         break
       case 'Assumption Explicitness':
         passed = /\b(assum|given that|provided that|if .+ holds)/i.test(p)
-        note = passed ? 'Problem hints at assumptions.' : 'No assumptions stated — Critique Engine will demand explicit assumptions.'
+        note = passed ? 'Problem hints at assumptions.' : 'No assumptions stated - Critique Engine will demand explicit assumptions.'
         break
       case 'Evidence Citation':
         passed = false
-        note = 'User problem cites no evidence — Reasoning Engine must ground claims in the Evidence Library.'
+        note = 'User problem cites no evidence - Reasoning Engine must ground claims in the Evidence Library.'
         break
       case 'Risk Identification':
         passed = /\b(risk|threat|shock|uncertain|hazard)/i.test(p)
-        note = passed ? 'Problem mentions risk explicitly.' : 'No risk language detected — Critique Engine will require risk analysis.'
+        note = passed ? 'Problem mentions risk explicitly.' : 'No risk language detected - Critique Engine will require risk analysis.'
         break
       default:
         passed = true
@@ -316,7 +316,7 @@ export function ruleEngine(problem: string, pack: DomainPack): RuleCheckResult[]
 }
 
 // ============================================================
-// Engine 4 — Reasoning Engine
+// Engine 4 - Reasoning Engine
 // ============================================================
 export async function reasoningEngine(
   config: ProviderConfig,
@@ -425,7 +425,7 @@ Produce the best expert-grade draft response you can. Be specific, evidence-grou
 }
 
 // ============================================================
-// Engine 5 — Critique Engine
+// Engine 5 - Critique Engine
 // ============================================================
 export interface CritiqueIssue {
   severity: 'high' | 'medium' | 'low'
@@ -459,7 +459,7 @@ ${heuristicsText}`
 }
 
 // ============================================================
-// Engine 6 — Improvement Engine
+// Engine 6 - Improvement Engine
 // ============================================================
 export async function improvementEngine(config: ProviderConfig, draft: string, critique: CritiqueResult, pack: DomainPack): Promise<string> {
   const issuesText = critique.issues.map((i) => `- [${i.severity.toUpperCase()}] (${i.heuristic}) ${i.description}`).join('\n')
@@ -470,7 +470,7 @@ You receive a draft and a critique. Produce an IMPROVED draft that fixes every c
 }
 
 // ============================================================
-// Engine 7 — Evaluation Engine
+// Engine 7 - Evaluation Engine
 // ============================================================
 export interface EvaluationResult {
   scores: { criterion: string; score: number; weight: number; rationale: string }[]
@@ -509,7 +509,7 @@ Threshold for delivery: ${threshold}.`
 }
 
 // ============================================================
-// Engine 8 — Memory Engine
+// Engine 8 - Memory Engine
 // ============================================================
 export interface MemoryRecord {
   id: string
@@ -538,7 +538,7 @@ export function getMemory(): MemoryRecord[] { return [...memoryStore].reverse() 
 export function clearMemory(): void { memoryStore.length = 0 }
 
 // ============================================================
-// Structure Engine — converts the final markdown into renderable
+// Structure Engine - converts the final markdown into renderable
 // structured data for diagrams (ToC, Logframe).
 // ============================================================
 export interface ToCData {
@@ -626,7 +626,7 @@ function row(r: any, level: string): LogframeRow {
 }
 
 // ============================================================
-// Feedback Engine — incorporates user feedback into a new draft.
+// Feedback Engine - incorporates user feedback into a new draft.
 // ============================================================
 export async function feedbackEngine(
   config: ProviderConfig,

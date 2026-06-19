@@ -52,7 +52,7 @@ export function EnginePipeline({ statuses, activeEngine, currentIteration, maxIt
           })}
         </div>
         <span className="ml-auto">
-          iteration {currentIteration > 0 ? currentIteration : '—'} / {maxIterations}
+          iteration {currentIteration > 0 ? currentIteration : '-'} / {maxIterations}
         </span>
       </div>
 

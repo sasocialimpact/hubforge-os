@@ -5,7 +5,7 @@ import type { ToCData, LogframeData } from '@/lib/types'
 import { Card } from '@/components/ui/card'
 
 // ============================================================
-// Theory of Change — horizontal flowchart renderer (SVG + HTML)
+// Theory of Change - horizontal flowchart renderer (SVG + HTML)
 // Inputs → Activities → Outputs → Outcomes → Impact
 // with Assumptions and External Factors beneath.
 // ============================================================
@@ -124,7 +124,7 @@ export function TheoryOfChangeDiagram({ data }: { data: ToCData }) {
 }
 
 // ============================================================
-// Logframe — 4×4 table renderer
+// Logframe - 4×4 table renderer
 // Level | Description | OVI | MoV | Assumptions
 // ============================================================
 
@@ -153,10 +153,10 @@ export function LogframeTable({ data }: { data: LogframeData }) {
               return (
                 <tr key={i} className="border-b border-border align-top">
                   <td className={`p-2 font-mono font-bold ${levelColor}`}>{row.level}</td>
-                  <td className="p-2 leading-snug">{row.description || <span className="text-muted-foreground italic">—</span>}</td>
-                  <td className="p-2 leading-snug">{row.ovi || <span className="text-muted-foreground italic">—</span>}</td>
-                  <td className="p-2 leading-snug">{row.mov || <span className="text-muted-foreground italic">—</span>}</td>
-                  <td className="p-2 leading-snug text-muted-foreground">{row.assumptions || <span className="italic">—</span>}</td>
+                  <td className="p-2 leading-snug">{row.description || <span className="text-muted-foreground italic">-</span>}</td>
+                  <td className="p-2 leading-snug">{row.ovi || <span className="text-muted-foreground italic">-</span>}</td>
+                  <td className="p-2 leading-snug">{row.mov || <span className="text-muted-foreground italic">-</span>}</td>
+                  <td className="p-2 leading-snug text-muted-foreground">{row.assumptions || <span className="italic">-</span>}</td>
                 </tr>
               )
             })}
