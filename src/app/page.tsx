@@ -151,6 +151,8 @@ export default function Home() {
           <ProgramDashboard
             onNewProgram={() => { setView('workspace'); setMode('general') }}
             onOpenProgram={() => { setView('workspace') }}
+            onOpenSettings={() => handleSettingsOpen(true)}
+            onOpenDataStorage={() => setDataStorageOpen(true)}
           />
         ) : (
           <>
@@ -192,7 +194,7 @@ export default function Home() {
               <Zap className="h-4 w-4 text-amber-600" /> AI Consumption
             </DialogTitle>
           </DialogHeader>
-          <UsagePanel />
+          <UsagePanel onOpenSettings={() => handleSettingsOpen(true)} />
         </DialogContent>
       </Dialog>
       <InstallPrompt />

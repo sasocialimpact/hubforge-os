@@ -1,16 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import { Zap, TrendingDown, Trash2, BarChart3 } from 'lucide-react'
+import { Zap, TrendingDown, Trash2, BarChart3, CheckCircle2, ArrowRight, Gauge } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { getUsageSummary, getOptimizationTips, clearUsage, type UsageSummary } from '@/lib/usage-tracker'
+import { getStoredProviderConfig } from '@/lib/providers'
+import { useRateLimit } from '@/lib/use-rate-limit'
 import { cn } from '@/lib/utils'
 
-export function UsagePanel() {
+interface UsagePanelProps {
+  /** Opens the AI provider settings dialog (so the "add your own key" CTA can deep-link). */
+  onOpenSettings?: () => void
+}
+
+export function UsagePanel({ onOpenSettings }: UsagePanelProps = {}) {
   const [summary, setSummary] = useState<UsageSummary>(() => getUsageSummary())
+  const [provider] = useState(() => getStoredProviderConfig().provider)
+  const rateLimit = useRateLimit(provider)
   const tips = getOptimizationTips(summary)
 
   const handleClear = () => {
@@ -20,8 +29,88 @@ export function UsagePanel() {
 
   const maxDailyCalls = Math.max(...summary.last7Days.map((d) => d.calls), 1)
 
+  // Progress bar colour buckets per spec:
+  //   amber  -> used < 3 (plenty left)
+  //   orange -> used 3-4 (running low)
+  //   red    -> used >= 5 (limit reached)
+  const rl = rateLimit
+  const rlPct = rl.limit > 0 ? Math.min(100, (rl.used / rl.limit) * 100) : 0
+  const rlBarColor = rl.used >= rl.limit
+    ? 'bg-red-500'
+    : rl.used >= 3
+      ? 'bg-orange-500'
+      : 'bg-amber-500'
+  const rlTextColor = rl.used >= rl.limit
+    ? 'text-red-600 dark:text-red-400'
+    : rl.used >= 3
+      ? 'text-orange-600 dark:text-orange-400'
+      : 'text-amber-700 dark:text-amber-400'
+
+  // CTA: prefer callback (deep-link to settings dialog), fall back to /help.
+  const keyCta = onOpenSettings ? (
+    <button
+      type="button"
+      onClick={onOpenSettings}
+      className="text-[11px] text-amber-700 dark:text-amber-400 hover:underline mt-1.5 flex items-center gap-1"
+    >
+      Add your own API key for unlimited strategies <ArrowRight className="h-3 w-3" />
+    </button>
+  ) : (
+    <a
+      href="/help"
+      className="text-[11px] text-amber-700 dark:text-amber-400 hover:underline mt-1.5 flex items-center gap-1"
+    >
+      Add your own API key for unlimited strategies <ArrowRight className="h-3 w-3" />
+    </a>
+  )
+
   return (
     <div className="space-y-4">
+      {/* Daily strategy allowance (scaling nudge) */}
+      {rl.isOwnKey ? (
+        <Card className="p-3 border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+            <div className="min-w-0">
+              <div className="text-xs font-medium">Unlimited strategies (your own key)</div>
+              <div className="text-[10px] text-muted-foreground">No daily cap — you are not using the shared Z.ai pool.</div>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <Card className="p-3">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="flex items-center gap-1.5">
+              <Gauge className="h-3.5 w-3.5 text-amber-600" />
+              <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">Daily strategy allowance</span>
+            </div>
+            {!rl.loading && (
+              <span className={cn('text-[10px] font-mono font-bold', rlTextColor)}>
+                {rl.used} / {rl.limit}
+              </span>
+            )}
+          </div>
+          {rl.loading ? (
+            <div className="h-2 rounded-full bg-muted animate-pulse" />
+          ) : (
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn('h-full rounded-full transition-all', rlBarColor)}
+                style={{ width: `${rlPct}%` }}
+              />
+            </div>
+          )}
+          <p className="text-[10px] text-muted-foreground mt-1.5">
+            {rl.loading
+              ? 'Checking your allowance…'
+              : rl.remaining > 0
+                ? `${rl.remaining} ${rl.remaining === 1 ? 'strategy' : 'strategies'} left today — shared Z.ai pool, resets daily.`
+                : 'Daily limit reached on the shared pool — resets at midnight.'}
+          </p>
+          {keyCta}
+        </Card>
+      )}
+
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
         <Card className="p-3">

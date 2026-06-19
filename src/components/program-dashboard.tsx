@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, FileText, Clock, Trash2, Copy, Search, Sparkles, Building2, BookOpen, Utensils, Droplet, Sprout, Heart, Database, CheckCircle2 } from 'lucide-react'
+import { Plus, FileText, Clock, Trash2, Copy, Search, Sparkles, Building2, BookOpen, Utensils, Droplet, Sprout, Heart, Database, CheckCircle2, KeyRound, Megaphone, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,14 +12,21 @@ import { PROGRAM_TEMPLATES } from '@/lib/program-templates'
 import { getPrograms, deleteProgram, duplicateProgram, syncProgramsFromSupabase, PROGRAM_STATUSES, type Program } from '@/lib/programs'
 import { getOrgProfile } from '@/lib/organization'
 import { hasOrgSupabase } from '@/lib/org-supabase'
+import { getStoredProviderConfig } from '@/lib/providers'
 import { cn } from '@/lib/utils'
 
 interface ProgramDashboardProps {
   onNewProgram: () => void
   onOpenProgram: (program: Program) => void
+  /** Open the AI provider settings dialog (used by the scaling nudge). Optional — falls back to /help. */
+  onOpenSettings?: () => void
+  /** Open the data-storage (Supabase) dialog (used by the scaling nudge). Optional — falls back to /help. */
+  onOpenDataStorage?: () => void
 }
 
-export function ProgramDashboard({ onNewProgram, onOpenProgram }: ProgramDashboardProps) {
+const SCALING_NUDGE_KEY = 'hubforge.scalingNudgeDismissed'
+
+export function ProgramDashboard({ onNewProgram, onOpenProgram, onOpenSettings, onOpenDataStorage }: ProgramDashboardProps) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<string>('all')
 
@@ -29,6 +36,30 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram }: ProgramDashboa
   // If the user has connected their own Supabase, show "syncing" until the
   // initial pull completes. Lazy init means we don't trigger a cascading render.
   const [syncingFromSupabase, setSyncingFromSupabase] = useState(() => hasOrgSupabase())
+
+  // Scaling nudge: only show on the client (avoids SSR hydration mismatch),
+  // only when the user is on the shared Z.ai key AND has not connected their
+  // own Supabase, AND they have not previously dismissed it.
+  // Lazy-init from localStorage (same pattern as syncingFromSupabase above) so
+  // we don't trigger the react-hooks/set-state-in-effect lint rule.
+  const [nudgeDismissed, setNudgeDismissed] = useState(() => {
+    if (typeof window === 'undefined') return true
+    try { return localStorage.getItem(SCALING_NUDGE_KEY) === '1' } catch { return true }
+  })
+  const [isSharedKey] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return getStoredProviderConfig().provider === 'zai'
+  })
+  const [hasOwnDb] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return hasOrgSupabase()
+  })
+  const showScalingNudge = !nudgeDismissed && isSharedKey && !hasOwnDb
+
+  const dismissNudge = () => {
+    try { localStorage.setItem(SCALING_NUDGE_KEY, '1') } catch {}
+    setNudgeDismissed(true)
+  }
 
   // On mount, if the user has connected their own Supabase, pull programs from
   // it and merge with local. This gives them their data across devices.
@@ -73,6 +104,58 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram }: ProgramDashboa
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+      {/* Scaling nudge — only when on shared key AND no own Supabase. */}
+      {showScalingNudge && (
+        <Card className="p-3 border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20">
+          <div className="flex items-start gap-3">
+            <div className="h-7 w-7 rounded-md bg-amber-500/20 flex items-center justify-center shrink-0">
+              <Megaphone className="h-4 w-4 text-amber-700 dark:text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs leading-relaxed">
+                <span className="font-semibold">Help HubForge stay free for 1000 NGOs:</span>{' '}
+                <span className="text-muted-foreground">Add your own API key (unlimited strategies) and connect your own Supabase (your data, your control).</span>
+              </div>
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                {onOpenSettings ? (
+                  <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1.5 border-amber-500/40 hover:bg-amber-100 dark:hover:bg-amber-900/30" onClick={onOpenSettings}>
+                    <KeyRound className="h-3 w-3" /> Set up API key
+                  </Button>
+                ) : (
+                  <a href="/help">
+                    <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1.5 border-amber-500/40 hover:bg-amber-100 dark:hover:bg-amber-900/30">
+                      <KeyRound className="h-3 w-3" /> Set up API key
+                    </Button>
+                  </a>
+                )}
+                {onOpenDataStorage ? (
+                  <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1.5 border-amber-500/40 hover:bg-amber-100 dark:hover:bg-amber-900/30" onClick={onOpenDataStorage}>
+                    <Database className="h-3 w-3" /> Connect database
+                  </Button>
+                ) : (
+                  <a href="/help">
+                    <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1.5 border-amber-500/40 hover:bg-amber-100 dark:hover:bg-amber-900/30">
+                      <Database className="h-3 w-3" /> Connect database
+                    </Button>
+                  </a>
+                )}
+                <Button size="sm" variant="ghost" className="h-7 text-[11px] text-muted-foreground" onClick={dismissNudge}>
+                  Maybe later
+                </Button>
+              </div>
+            </div>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={dismissNudge}
+              className="text-muted-foreground hover:text-foreground shrink-0 mt-0.5"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </Card>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>

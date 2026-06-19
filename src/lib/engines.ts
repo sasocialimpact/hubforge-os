@@ -75,42 +75,59 @@ async function getZAI() {
 }
 
 // The single LLM entry point. Routes to Z.ai SDK or an OpenAI-compatible fetch.
+//
+// Rate limiting + retry:
+//   - Shared 'zai' provider: wrapped with withSharedSlot (sliding-window queue)
+//     + withRetry (exponential backoff on 429/5xx/network errors). This protects
+//     the shared key from being overwhelmed when many users hit the platform.
+//   - User-key providers ('zai-key', 'openai', etc.): rate-limited by the
+//     user's own provider — no queue needed. We still retry on transient errors.
+//   - Per-user daily limits are enforced at the API route layer
+//     (see src/lib/server/rate-limit-server.ts).
 export async function llm(config: ProviderConfig, systemPrompt: string, userPrompt: string): Promise<string> {
   const c = normalizeConfig(config)
   if (c.provider === 'zai') {
-    const zai = await getZAI()
-    const completion = await zai.chat.completions.create({
+    // Shared key — wrap with rate-limit queue + retry.
+    const { withSharedSlot, withRetry } = await import('./server/llm-rate-limit')
+    return withSharedSlot(() => withRetry(async () => {
+      const zai = await getZAI()
+      const completion = await zai.chat.completions.create({
+        messages: [
+          { role: 'assistant', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        thinking: { type: 'disabled' },
+      })
+      return completion.choices[0]?.message?.content ?? ''
+    }))
+  }
+  // User's own key — retry only, no shared queue.
+  const { withRetry } = await import('./server/llm-rate-limit')
+  return withRetry(async () => {
+    // OpenAI-compatible endpoint
+    const url = `${c.baseUrl}/chat/completions`
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (c.apiKey) headers['Authorization'] = `Bearer ${c.apiKey}`
+    const body = {
+      model: c.model,
       messages: [
-        { role: 'assistant', content: systemPrompt },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      thinking: { type: 'disabled' },
+      temperature: 0.7,
+    }
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
     })
-    return completion.choices[0]?.message?.content ?? ''
-  }
-  // OpenAI-compatible endpoint
-  const url = `${c.baseUrl}/chat/completions`
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (c.apiKey) headers['Authorization'] = `Bearer ${c.apiKey}`
-  const body = {
-    model: c.model,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-    temperature: 0.7,
-  }
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '')
+      throw new Error(`Provider ${c.provider} returned ${res.status}: ${txt.slice(0, 300)}`)
+    }
+    const data = await res.json()
+    return data?.choices?.[0]?.message?.content ?? ''
   })
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '')
-    throw new Error(`Provider ${c.provider} returned ${res.status}: ${txt.slice(0, 300)}`)
-  }
-  const data = await res.json()
-  return data?.choices?.[0]?.message?.content ?? ''
 }
 
 // Try to extract a JSON object from an LLM response.

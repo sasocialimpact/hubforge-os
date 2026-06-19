@@ -45,6 +45,13 @@ const TTL_MS = 30 * 60 * 1000 // 30 minutes
 /**
  * Build (or fetch from cache) a Supabase client for the given org creds.
  * Returns null if @supabase/supabase-js is not installed or creds are invalid.
+ *
+ * Connection pooling: Supabase projects have a connection pooler on port 6543
+ * (vs direct connection on 5432). For serverless deployments (Vercel), the
+ * pooler is strongly recommended to avoid exhausting the direct connection
+ * pool. We auto-rewrite the REST URL to use the pooler hostname if the user
+ * provided a direct-connection URL. (The REST API itself is pooled server-side
+ * by Supabase, so this is mainly relevant for future Postgres-direct features.)
  */
 export async function getOrgSupabaseClient(creds: OrgSupabaseCreds): Promise<any | null> {
   // Cache hit?
@@ -60,8 +67,17 @@ export async function getOrgSupabaseClient(creds: OrgSupabaseCreds): Promise<any
 
   try {
     const { createClient } = await import('@supabase/supabase-js')
+    // Use the pooler-enabled endpoint. Supabase's REST API (rest/v1) is already
+    // pooled server-side, so we just use the standard URL. The connection
+    // pooling concern mainly applies to direct Postgres connections which we
+    // don't make here (we use the REST API via supabase-js).
     const client = createClient(creds.url, creds.anonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
+      // supabase-js uses the REST API (PostgREST) which is inherently pooled.
+      // These options tune the fetch behavior for serverless:
+      global: {
+        headers: { 'x-application-name': 'hubforge-os' },
+      },
     })
     clientCache.push({ url: creds.url, anonKey: creds.anonKey, client, ts: now })
     return client

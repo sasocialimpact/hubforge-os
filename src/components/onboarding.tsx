@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { BrainCircuit, ArrowRight, Check } from 'lucide-react'
+import { BrainCircuit, ArrowRight, Check, Gift, KeyRound, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -109,6 +109,23 @@ export function FirstRunOnboarding({ onComplete }: { onComplete: () => void }) {
                 placeholder="Rural Education Action Program"
                 className="text-sm"
               />
+            </div>
+          </div>
+
+          {/* How HubForge stays free — compact 3-line explainer */}
+          <div className="rounded-lg border border-amber-500/30 bg-amber-50/40 dark:bg-amber-950/20 p-3 space-y-1.5 mt-1">
+            <div className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground mb-1">How HubForge stays free</div>
+            <div className="flex items-center gap-2 text-[11px] leading-tight">
+              <Gift className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+              <span>Free forever — Z.ai's shared AI key works out of the box</span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] leading-tight">
+              <KeyRound className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+              <span>Add your own key (OpenAI, Groq, etc.) for unlimited strategies</span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] leading-tight">
+              <Database className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+              <span>Connect your own Supabase to own your data</span>
             </div>
           </div>
 
