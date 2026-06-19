@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { BrainCircuit, Sparkles, Layers, Settings, Building2, LayoutGrid } from 'lucide-react'
+import { BrainCircuit, Sparkles, Layers, Settings, Building2, LayoutGrid, Zap } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -9,11 +9,12 @@ import { socialImpactPackMeta } from '@/lib/social-impact-pack'
 import { GeneralMode } from '@/components/general-mode'
 import { GeekMode } from '@/components/geek-mode'
 import { SettingsDialog } from '@/components/settings-dialog'
-import { OrgSettings } from '@/components/org-settings'
 import { ProgramDashboard } from '@/components/program-dashboard'
+import { UsagePanel } from '@/components/usage-panel'
 import { InstallPrompt } from '@/components/install-prompt'
 import { FirstRunOnboarding, useShouldOnboard } from '@/components/onboarding'
 import { CommandPalette, useCommandPalette } from '@/components/command-palette'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getStoredProviderConfig, type ProviderConfig } from '@/lib/providers'
 import { analytics } from '@/lib/analytics'
 
@@ -23,7 +24,7 @@ export default function Home() {
   const [mode, setMode] = useState<Mode>('general')
   const [view, setView] = useState<'dashboard' | 'workspace'>('dashboard')
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [orgOpen, setOrgOpen] = useState(false)
+  const [usageOpen, setUsageOpen] = useState(false)
   const [providerConfig, setProviderConfig] = useState<ProviderConfig>(() => getStoredProviderConfig())
   const shouldOnboard = useShouldOnboard()
   const [onboardingDone, setOnboardingDone] = useState(false)
@@ -79,9 +80,9 @@ export default function Home() {
               <LayoutGrid className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{view === 'dashboard' ? 'Workspace' : 'Programs'}</span>
             </Button>
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setOrgOpen(true)}>
-              <Building2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Org</span>
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setUsageOpen(true)}>
+              <Zap className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Usage</span>
             </Button>
             <Badge variant="outline" className="hidden md:inline-flex gap-1 font-mono text-[10px]">
               <Layers className="h-3 w-3" /> v0.2
@@ -134,6 +135,7 @@ export default function Home() {
             <span>HubForge OS - open-source decision intelligence infrastructure</span>
           </div>
           <div className="flex items-center gap-4">
+            <a href="/organization" className="hover:text-amber-700 dark:hover:text-amber-400">Organization</a>
             <a href="/help" className="hover:text-amber-700 dark:hover:text-amber-400">Help</a>
             <a href="/privacy" className="hover:text-amber-700 dark:hover:text-amber-400">Privacy</a>
             <a href="/terms" className="hover:text-amber-700 dark:hover:text-amber-400">Terms</a>
@@ -144,7 +146,16 @@ export default function Home() {
       </footer>
 
       <SettingsDialog open={settingsOpen} onOpenChange={handleSettingsOpen} onSaved={handleProviderSaved} />
-      <OrgSettings open={orgOpen} onOpenChange={setOrgOpen} />
+      <Dialog open={usageOpen} onOpenChange={setUsageOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Zap className="h-4 w-4 text-amber-600" /> AI Consumption
+            </DialogTitle>
+          </DialogHeader>
+          <UsagePanel />
+        </DialogContent>
+      </Dialog>
       <InstallPrompt />
       {shouldOnboard && !onboardingDone && (
         <FirstRunOnboarding onComplete={handleOnboardingComplete} />

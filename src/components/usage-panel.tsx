@@ -1,0 +1,140 @@
+'use client'
+
+import { useState } from 'react'
+import { Zap, TrendingDown, Trash2, BarChart3 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { getUsageSummary, getOptimizationTips, clearUsage, type UsageSummary } from '@/lib/usage-tracker'
+import { cn } from '@/lib/utils'
+
+export function UsagePanel() {
+  const [summary, setSummary] = useState<UsageSummary>(() => getUsageSummary())
+  const tips = getOptimizationTips(summary)
+
+  const handleClear = () => {
+    clearUsage()
+    setSummary(getUsageSummary())
+  }
+
+  const maxDailyCalls = Math.max(...summary.last7Days.map((d) => d.calls), 1)
+
+  return (
+    <div className="space-y-4">
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card className="p-3">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Zap className="h-3.5 w-3.5 text-amber-600" />
+            <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">API Calls</span>
+          </div>
+          <div className="text-xl font-bold">{summary.totalCalls}</div>
+        </Card>
+        <Card className="p-3">
+          <div className="flex items-center gap-1.5 mb-1">
+            <BarChart3 className="h-3.5 w-3.5 text-amber-600" />
+            <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">Est. Tokens</span>
+          </div>
+          <div className="text-xl font-bold">{summary.totalTokens > 1000 ? `${(summary.totalTokens / 1000).toFixed(1)}K` : summary.totalTokens}</div>
+        </Card>
+        <Card className="p-3">
+          <div className="flex items-center gap-1.5 mb-1">
+            <TrendingDown className="h-3.5 w-3.5 text-emerald-600" />
+            <span className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground">Est. Cost</span>
+          </div>
+          <div className="text-xl font-bold">{summary.totalCost > 0 ? `$${summary.totalCost.toFixed(2)}` : 'Free'}</div>
+        </Card>
+      </div>
+
+      {/* 7-day chart */}
+      {summary.totalCalls > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-mono flex items-center gap-1.5">
+              <BarChart3 className="h-3.5 w-3.5 text-amber-600" /> Last 7 days
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end gap-1.5 h-20">
+              {summary.last7Days.map((day) => (
+                <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full bg-amber-500/70 rounded-t-sm transition-all" style={{ height: `${(day.calls / maxDailyCalls) * 100}%`, minHeight: day.calls > 0 ? '4px' : '0' }} />
+                  <span className="text-[8px] font-mono text-muted-foreground">{day.date.slice(5)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* By provider */}
+      {Object.keys(summary.byProvider).length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-mono">By Provider</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {Object.entries(summary.byProvider).map(([provider, data]) => (
+              <div key={provider} className="flex items-center justify-between text-xs">
+                <span className="font-mono">{provider}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-muted-foreground">{data.calls} calls</span>
+                  <span className="text-muted-foreground">{data.tokens > 1000 ? `${(data.tokens / 1000).toFixed(1)}K` : data.tokens} tokens</span>
+                  <span className={cn('font-mono font-bold', data.cost > 0 ? 'text-amber-600' : 'text-emerald-600')}>
+                    {data.cost > 0 ? `$${data.cost.toFixed(2)}` : 'Free'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* By engine */}
+      {Object.keys(summary.byEngine).length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-mono">By Engine</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {Object.entries(summary.byEngine).sort((a, b) => b[1].calls - a[1].calls).map(([engine, data]) => (
+              <div key={engine} className="flex items-center justify-between text-xs">
+                <span className="font-mono capitalize">{engine}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-muted-foreground">{data.calls} calls</span>
+                  <span className="text-muted-foreground">{data.tokens > 1000 ? `${(data.tokens / 1000).toFixed(1)}K` : data.tokens} tokens</span>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Optimization tips */}
+      {tips.length > 0 && (
+        <Card className="p-4 bg-amber-50/50 dark:bg-amber-950/20 border-amber-500/30">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingDown className="h-4 w-4 text-amber-600" />
+            <span className="text-xs font-bold">Optimization Tips</span>
+          </div>
+          <ul className="space-y-1.5">
+            {tips.map((tip, i) => (
+              <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                <span className="text-amber-600 mt-0.5">-</span>
+                <span>{tip}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {/* Clear */}
+      {summary.totalCalls > 0 && (
+        <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-red-500" onClick={handleClear}>
+          <Trash2 className="h-3 w-3" /> Clear usage data
+        </Button>
+      )}
+    </div>
+  )
+}

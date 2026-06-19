@@ -181,6 +181,31 @@ export function GeneralMode({ connected, providerConfig }: { connected: boolean;
       analytics.runComplete({ finalScore, iterations, thresholdMet }, Date.now() - loopStart)
       analytics.outputViewed({ tab: 'strategy', hasToc: !!structured.toc, hasLogframe: !!structured.logframe })
 
+      // AUTO-SAVE: Save as a program so the user can resume later
+      try {
+        const { createProgram, saveProgram } = await import('@/lib/programs')
+        const program = createProgram({
+          title: problemText.slice(0, 60) + (problemText.length > 60 ? '...' : ''),
+          problem: problemText,
+          outputTypes: outs,
+          draft: finalDraft,
+          evaluation,
+          structured,
+          provider: config.provider,
+          tags: { sector: getOrgProfile()?.sectors?.[0], geography: getOrgProfile()?.operatingCountries?.[0] },
+        })
+        saveProgram(program)
+      } catch {}
+
+      // AUTO-SAVE: Save web search results as context block for reuse
+      if (webSearch) {
+        try {
+          const { saveSearchAsBlock } = await import('@/lib/context-blocks')
+          const location = problemText.match(/(?:in|at|for)\s+([A-Z][a-zA-Z\s,]+)/)?.[1]?.trim()
+          if (location) saveSearchAsBlock('geography', location, webSearch)
+        } catch {}
+      }
+
       saveMemory({
         id: `s-${Date.now()}`, timestamp: new Date().toISOString(),
         problem: problemText, iterations, finalScore, thresholdMet,

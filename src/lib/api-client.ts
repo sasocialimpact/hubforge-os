@@ -1,10 +1,21 @@
 // API client - replaces socket.io with sequential fetch calls.
+// Every call is tracked for consumption visibility.
 import type { ProviderConfig, OutputType, ClarifyingQuestion, StructuredOutputs, EvaluationResult, Decomposition } from './types'
+import { trackUsage } from './usage-tracker'
 
 async function apiCall(path: string, body: any): Promise<any> {
+  const start = Date.now()
   const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   if (!res.ok) { const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })); throw new Error(err.error || `Request failed: ${res.status}`) }
-  return res.json()
+  const json = await res.json()
+  // Track usage (client-side, for the user to see their consumption)
+  const duration = Date.now() - start
+  const inputChars = JSON.stringify(body).length
+  const outputChars = JSON.stringify(json).length
+  const engine = body.step || path.split('/').pop() || 'unknown'
+  const provider = body.providerConfig?.provider || 'zai'
+  try { trackUsage({ provider, engine, durationMs: duration, inputChars, outputChars }) } catch {}
+  return json
 }
 
 export async function callInterview(problem: string, providerConfig: ProviderConfig): Promise<{ decomposition: Decomposition; questions: ClarifyingQuestion[]; provider: string }> {
