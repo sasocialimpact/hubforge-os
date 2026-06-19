@@ -33,7 +33,7 @@ export const PROVIDERS: ProviderMeta[] = [
     defaultBaseUrl: '',
     modelHint: 'auto',
     docsUrl: '',
-    badge: 'GETTING STARTED',
+    badge: 'QUICK START',
     badgeColor: 'emerald',
   },
   {
