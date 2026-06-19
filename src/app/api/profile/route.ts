@@ -1,5 +1,6 @@
 // POST /api/profile - save/update user profile, GET - list (admin) or count (public)
 import { NextRequest, NextResponse } from 'next/server'
+export const maxDuration = 10
 
 const ADMIN_KEY = process.env.HUBFORGE_ADMIN_KEY || 'hubforge-admin-2024'
 const profileStore: Map<string, any> = new Map()

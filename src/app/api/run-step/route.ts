@@ -12,6 +12,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { step, problem, decomposition, retrieval, priorDraft, priorCritique, draft, improved, critique, iteration, maxIterations, outputTypes, answers, providerConfig, threshold } = body as any
+
+    // Input validation
+    if (!step || typeof step !== 'string') return NextResponse.json({ error: 'step is required' }, { status: 400 })
+    if (!problem || typeof problem !== 'string') return NextResponse.json({ error: 'problem is required' }, { status: 400 })
+    if (problem.length > 10000) return NextResponse.json({ error: 'problem too long (max 10000 chars)' }, { status: 400 })
+
     const config = normalizeConfig(providerConfig)
     const qualThreshold = threshold ?? 80
 

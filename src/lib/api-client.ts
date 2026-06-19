@@ -37,6 +37,12 @@ export async function callFeedback(currentDraft: string, feedback: string, outpu
 export async function callWebSearch(problem: string, decomposition: any, providerConfig: ProviderConfig): Promise<{ demographic: any[]; previousPrograms: any[]; evidence: any[]; summary: string }> {
   return apiCall('/api/search', { problem, decomposition, providerConfig })
 }
-export async function getMemory(): Promise<any[]> { const res = await fetch('/api/memory'); const data = await res.json(); return data.memory ?? [] }
-export async function clearMemory(): Promise<void> { await fetch('/api/memory', { method: 'DELETE' }) }
-export async function saveMemory(record: any): Promise<void> { await apiCall('/api/memory', { record }) }
+export async function getMemory(): Promise<any[]> {
+  try { const res = await fetch('/api/memory'); const data = await res.json(); return data.memory ?? [] } catch { return [] }
+}
+export async function clearMemory(): Promise<void> {
+  try { await fetch('/api/memory', { method: 'DELETE' }) } catch {}
+}
+export async function saveMemory(record: any): Promise<void> {
+  try { await apiCall('/api/memory', { record }) } catch {}
+}

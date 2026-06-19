@@ -11,6 +11,9 @@ export async function POST(req: NextRequest) {
     if (!problem || typeof problem !== 'string') {
       return NextResponse.json({ error: 'problem is required' }, { status: 400 })
     }
+    if (problem.length > 10000) {
+      return NextResponse.json({ error: 'problem too long (max 10000 chars)' }, { status: 400 })
+    }
     const config = normalizeConfig(providerConfig)
     const decomposition = await supervisorEngine(config, problem, socialImpactPack)
     return NextResponse.json({

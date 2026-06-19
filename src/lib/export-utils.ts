@@ -10,14 +10,20 @@ import type { ToCData, LogframeData } from './types'
 // MARKDOWN → WORD (.docx)
 // ============================================================
 export async function exportStrategyToWord(markdown: string, filename = 'hubforge-strategy.docx') {
-  const doc = new Document({
-    sections: [{
-      properties: {},
-      children: parseMarkdownToDocx(markdown),
-    }],
-  })
-  const blob = await Packer.toBlob(doc)
-  downloadBlob(blob, filename)
+  try {
+    if (!markdown || !markdown.trim()) throw new Error('No content to export')
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: parseMarkdownToDocx(markdown),
+      }],
+    })
+    const blob = await Packer.toBlob(doc)
+    downloadBlob(blob, filename)
+  } catch (e) {
+    console.error('[Export] Word failed:', e)
+    alert('Export to Word failed. Please try again.')
+  }
 }
 
 function parseMarkdownToDocx(md: string): Paragraph[] {

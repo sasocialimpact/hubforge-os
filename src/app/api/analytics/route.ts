@@ -1,5 +1,6 @@
 // POST /api/analytics - track event, GET - dashboard data (admin)
 import { NextRequest, NextResponse } from 'next/server'
+export const maxDuration = 10
 
 const ADMIN_KEY = process.env.HUBFORGE_ADMIN_KEY || 'hubforge-admin-2024'
 const eventStore: any[] = []
@@ -19,8 +20,21 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { profileId, sessionId, eventType, eventCategory, eventData, page, durationMs } = body
-    if (!eventType) return NextResponse.json({ error: 'eventType is required' }, { status: 400 })
-    const event = { profile_id: profileId || null, session_id: sessionId || null, event_type: eventType, event_category: eventCategory || 'engagement', event_data: eventData || {}, page: page || '/', duration_ms: durationMs || null, user_agent: req.headers.get('user-agent') || null, referrer: req.headers.get('referer') || null }
+    if (!eventType || typeof eventType !== 'string') return NextResponse.json({ error: 'eventType is required' }, { status: 400 })
+    if (eventType.length > 100) return NextResponse.json({ error: 'eventType too long' }, { status: 400 })
+    // Sanitize: only allow alphanumeric + underscore in eventType
+    if (!/^[a-z_]+$/i.test(eventType)) return NextResponse.json({ error: 'invalid eventType format' }, { status: 400 })
+    const event = {
+      profile_id: typeof profileId === 'string' ? profileId.slice(0, 100) : null,
+      session_id: typeof sessionId === 'string' ? sessionId.slice(0, 100) : null,
+      event_type: eventType.slice(0, 100),
+      event_category: typeof eventCategory === 'string' ? eventCategory.slice(0, 50) : 'engagement',
+      event_data: eventData && typeof eventData === 'object' ? eventData : {},
+      page: typeof page === 'string' ? page.slice(0, 200) : '/',
+      duration_ms: typeof durationMs === 'number' ? durationMs : null,
+      user_agent: req.headers.get('user-agent')?.slice(0, 500) || null,
+      referrer: req.headers.get('referer')?.slice(0, 500) || null,
+    }
     const supabase = await getSupabaseClient()
     if (supabase) { const { error } = await supabase.from('analytics_events').insert(event); if (error) console.error('[analytics] supabase error:', error); else return NextResponse.json({ success: true }) }
     eventStore.push({ ...event, id: `e-${eventStore.length}`, created_at: new Date().toISOString() })

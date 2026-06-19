@@ -1,5 +1,6 @@
 // GET /api/memory - list sessions, DELETE - clear, POST - save
 import { NextRequest, NextResponse } from 'next/server'
+export const maxDuration = 10
 
 interface MemoryRecord { id: string; timestamp: string; problem: string; iterations: number; finalScore: number; thresholdMet: boolean; finalDraft: string; structuredOutputs?: any; provider?: string }
 const memoryStore: MemoryRecord[] = []

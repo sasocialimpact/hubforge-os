@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { currentDraft, feedback, outputTypes, providerConfig } = body as { currentDraft: string; feedback: string; outputTypes: OutputType[]; providerConfig?: ProviderConfig }
     if (!currentDraft || !feedback) return NextResponse.json({ error: 'currentDraft and feedback are required' }, { status: 400 })
+    if (feedback.length > 5000) return NextResponse.json({ error: 'feedback too long (max 5000 chars)' }, { status: 400 })
     const config = normalizeConfig(providerConfig)
     const { improved, feedbackAddressed } = await feedbackEngine(config, currentDraft, feedback, socialImpactPack)
     const evaluation = await evaluationEngine(config, improved, socialImpactPack, 80)
