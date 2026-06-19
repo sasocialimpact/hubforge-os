@@ -161,7 +161,16 @@ export function FirstRunOnboarding({ onComplete }: { onComplete: () => void }) {
 export function useShouldOnboard() {
   const [shouldOnboard] = useState(() => {
     if (typeof window === 'undefined') return false
-    try { return !localStorage.getItem(ONBOARDING_KEY) } catch { return false }
+    try {
+      // Already onboarded - skip
+      if (localStorage.getItem(ONBOARDING_KEY)) return false
+      // Logged in users already provided their name/org during signup,
+      // so don't show the onboarding modal (it would ask for the same info again).
+      const session = localStorage.getItem('hubforge.session')
+      if (session) return false
+      // Not onboarded + not logged in = show onboarding
+      return true
+    } catch { return false }
   })
   return shouldOnboard
 }
