@@ -1,7 +1,7 @@
 # HubForge OS - Developer Documentation
 
 > Complete guide for developers building on HubForge OS.
-> Last updated: June 2026 | Version: 0.2.0 | License: Apache-2.0
+> Last updated: June 2026 | Version: 0.3.0 | License: Apache-2.0
 
 ---
 
@@ -49,14 +49,24 @@
 │  │  - Error handling                                │   │
 │  └──────────────────────┬──────────────────────────┘   │
 │                         │                               │
-│  localStorage:          │ fetch()                       │
-│  - providerConfig       │                               │
-│  - orgProfile           │                               │
-│  - programs             │                               │
-│  - contextBlocks        │                               │
-│  - usage data           │                               │
-│  - analytics queue      │                               │
+│  localStorage:          │ fetch() with optional           │
+│  - providerConfig       │   X-Org-Supabase-Url            │
+│  - orgSupabase (URL +   │   X-Org-Supabase-Key headers    │
+│    anon key)            │                                 │
+│  - orgProfile           │                                 │
+│  - programs             │                                 │
+│  - contextBlocks        │                                 │
+│  - usage data           │                                 │
+│  - analytics queue      │                                 │
 └─────────────────────────┼───────────────────────────────┘
+                          │
+                ┌─────────┴──────────┐
+                │ programs/blocks:   │
+                │ browser talks to   │
+                │ user's Supabase    │
+                │ DIRECTLY (no API   │
+                │ roundtrip)         │
+                └─────────┬──────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
@@ -86,10 +96,17 @@
 │  └────┬─────┘ └────┬─────┘ └────┬─────┘ └──────────┘  │
 │       │            │            │                       │
 │  ┌────┴────────────┴────────────┴───────────────────┐  │
-│  │  Supabase (optional) or in-memory fallback       │  │
-│  │  - reasoning_sessions                            │  │
-│  │  - user_profiles                                 │  │
-│  │  - analytics_events                              │  │
+│  │  3-tier persistence fallback (per request):      │  │
+│  │                                                  │  │
+│  │  1. org-supabase   ← X-Org-Supabase-* headers    │  │
+│  │     (user's OWN Supabase — proxy to their DB)    │  │
+│  │  2. platform-supabase ← SUPABASE_URL env vars    │  │
+│  │     (shared fallback when user hasn't connected) │  │
+│  │  3. in-memory store (per-instance, lost on cold  │  │
+│  │     start)                                       │  │
+│  │                                                  │  │
+│  │  Each response includes a `source` field so the  │  │
+│  │  caller can verify which path was taken.         │  │
 │  └──────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -100,9 +117,11 @@
 
 2. **API keys in browser** - User API keys (OpenAI, Groq, etc.) are stored in localStorage and sent directly to the provider. They never touch HubForge servers.
 
-3. **localStorage-first** - All user data (programs, org profile, context blocks, usage) is stored in localStorage. Supabase is optional for persistence across devices.
+3. **localStorage-first** - All user data (programs, org profile, context blocks, usage) is stored in localStorage. Supabase (user-owned or platform-shared) is used for persistence across devices.
 
-4. **Serverless-friendly** - Each API route is a standalone function with `maxDuration` set. No state between requests.
+4. **User-owned data (3-tier fallback)** - Users can connect their OWN Supabase instance via the Data Storage dialog. When connected, their data (programs, reasoning sessions, context blocks, user profile, analytics events, lessons) lives in THEIR database. The three persistence API routes (`/api/memory`, `/api/profile`, `/api/analytics`) follow a strict priority chain: org-supabase (from request headers) → platform-supabase (env vars) → in-memory. Programs and context blocks bypass HubForge entirely — the browser talks directly to the user's Supabase using the public anon key (RLS protects the data).
+
+5. **Serverless-friendly** - Each API route is a standalone function with `maxDuration` set. No state between requests.
 
 ---
 
@@ -552,7 +571,25 @@ Runs one of 6 engines. The `step` field determines which engine.
 ```
 
 **Steps:** `retrieval` | `rule` | `reasoning` | `critique` | `improvement` | `evaluation`
-**Validation:** step + problem required, max 10000 chars
+
+**Validation:** Step is required and must be one of the six known steps. Inputs are then validated per-step — the route splits steps into two sets defined in `src/app/api/run-step/route.ts`:
+
+```typescript
+const PROBLEM_STEPS = new Set(['retrieval', 'rule', 'reasoning'])
+const DRAFT_STEPS  = new Set(['critique', 'improvement', 'evaluation'])
+```
+
+| Step | Set | Required input fields | Notes |
+|------|-----|-----------------------|-------|
+| `retrieval`  | PROBLEM_STEPS | `problem` (max 10000 chars) + `decomposition` | Deterministic, no LLM |
+| `rule`       | PROBLEM_STEPS | `problem` (max 10000 chars) | Deterministic, no LLM |
+| `reasoning`  | PROBLEM_STEPS | `problem` (max 10000 chars) + `decomposition`, `retrieval`, `iteration`, `maxIterations`, `outputTypes` | LLM call |
+| `critique`   | DRAFT_STEPS   | `draft` (string) | Operates on a draft, not the original `problem` |
+| `improvement`| DRAFT_STEPS   | `draft` (string) + `critique` | Rewrites the draft given the critique |
+| `evaluation` | DRAFT_STEPS   | `improved` (string) | Scores the improved draft on the rubric |
+
+This split fixes a regression where `critique`/`improvement`/`evaluation` were incorrectly rejected with `problem is required` because they don't take `problem` — they operate on the draft/critique/improved text instead.
+
 **maxDuration:** 60 seconds
 
 ---
@@ -650,33 +687,42 @@ Incorporates user feedback into a revised draft.
 ---
 
 ### GET/POST/DELETE /api/memory
-Session persistence (Supabase or in-memory fallback).
+Session persistence via the **3-tier fallback chain**:
+
+1. **org-supabase** (preferred) — credentials read from `X-Org-Supabase-Url` / `X-Org-Supabase-Key` request headers (see `src/lib/server/org-supabase.ts`). Reads/writes go to the user's OWN Supabase. HubForge platform never persists the data.
+2. **platform-supabase** (fallback) — `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` env vars. Used when the user hasn't connected their own DB but the operator has configured platform Supabase.
+3. **in-memory store** (last resort) — per-instance array, lost on cold start. App still works with zero Supabase config.
+
+Each response includes a `source` field (`'org-supabase'` | `'platform-supabase'` | `'memory'` | `'error'`) so callers can verify which path was taken.
 
 - **GET** - List all sessions (max 50)
 - **POST** - Save a session `{ record: { id, problem, finalDraft, ... } }`
 - **DELETE** - Clear all sessions
 
+**Request headers (optional):** `X-Org-Supabase-Url`, `X-Org-Supabase-Key` — sent automatically by `orgSupabaseHeaders()` in `src/lib/org-supabase.ts` whenever the user has connected their own Supabase.
 **maxDuration:** 10 seconds
 
 ---
 
 ### GET/POST /api/profile
-User profile management.
+User profile management. Same **3-tier fallback chain** as `/api/memory` (org-supabase from headers → platform-supabase from env → in-memory). Responses include a `source` field.
 
 - **POST** - Save/update profile `{ profileId, name, email, organization, country, role }`
-- **GET** (with `?admin_key=XXX`) - List all users (admin only)
+- **GET** (with `?admin_key=XXX`) - List all users (admin only). Admin GET always uses **platform-supabase only** — the admin dashboard is platform-level, not per-user.
 - **GET** (without admin_key) - Returns user count only
 
+**Request headers (optional):** `X-Org-Supabase-Url`, `X-Org-Supabase-Key` for non-admin requests.
 **maxDuration:** 10 seconds
 
 ---
 
 ### GET/POST /api/analytics
-Event tracking.
+Event tracking. Same **3-tier fallback chain** as `/api/memory`. Responses include a `source` field. Falls through gracefully: if the org-supabase insert errors out (e.g. table missing, network blip), the route logs a warning and continues down the chain to platform-supabase / in-memory rather than returning a 500.
 
 - **POST** - Track an event `{ eventType, eventCategory, eventData, ... }`
-- **GET** (with `?admin_key=XXX&days=30`) - Dashboard data (admin only)
+- **GET** (with `?admin_key=XXX&days=30`) - Dashboard data (admin only). Admin GET always uses **platform-supabase only**.
 
+**Request headers (optional):** `X-Org-Supabase-Url`, `X-Org-Supabase-Key` — automatically attached by `analytics.ts` on every flush.
 **eventType validation:** alphanumeric + underscore only, max 100 chars
 **maxDuration:** 10 seconds
 
@@ -774,12 +820,62 @@ Each provider has: `id`, `label`, `description`, `needsKey`, `defaultModel`, `de
 - `createProgram()`: factory function
 - `duplicateProgram()`: copy as starting point
 - `PROGRAM_STATUSES`: 6 statuses (draft, in_review, submitted, funded, active, closed)
+- `saveAllPrograms(programs)`: overwrite all local programs (used after a Supabase pull+merge)
+- `syncProgramsFromSupabase()`: async pull+merge — pulls all programs from the user's own Supabase, merges with local by `updatedAt` (preferring the newer), writes the merged list back to localStorage, and returns it. Call on dashboard mount (only does network work if the user has connected their own Supabase).
+
+**Org-Supabase sync:** `saveProgram()` and `deleteProgram()` now fire-and-forget call `syncProgramToSupabase(updated)` / `deleteProgramFromSupabase(id)` from `org-supabase-sync.ts`. These are no-ops when the user hasn't connected their own Supabase. localStorage remains the source of truth for instant UI feedback; the Supabase write happens in the background.
 
 ### context-blocks.ts
 - `ContextBlock` interface (5 types: geography, donor, sector, organization, stakeholder)
 - CRUD: `getBlocks()`, `saveBlock()`, `deleteBlock()`
 - `saveSearchAsBlock()`: auto-create block from web search results
 - `getBlocksContext()`: format blocks as LLM context string
+- `syncBlocksFromSupabase()`: async pull+merge — pulls context blocks from the user's own Supabase, merges with local by `(type, name)` preferring the newer `updatedAt`, writes the merged list back to localStorage, and returns it. Exposed for future use (dashboard mount, settings sync button).
+
+**Org-Supabase sync:** `saveBlock()` and `deleteBlock()` now fire-and-forget call `syncBlockToSupabase(block)` / `deleteBlockFromSupabase(block)` from `org-supabase-sync.ts`. No-ops when the user hasn't connected their own Supabase.
+
+### org-supabase.ts (client-side config)
+Browser-side persistence for the user's OWN Supabase connection. Stored in `localStorage` under `hubforge.orgSupabase` as `{ url, anonKey }`. The anon key is used (not the service role key) because it's designed to be public with RLS policies controlling access.
+
+- `OrgSupabaseConfig` interface (`url`, `anonKey`)
+- `getOrgSupabase()`: read config from localStorage (or null)
+- `storeOrgSupabase(config)`: write config
+- `clearOrgSupabase()`: remove config (called on disconnect)
+- `hasOrgSupabase()`: boolean check
+- `ORG_SUPABASE_URL_HEADER` / `ORG_SUPABASE_KEY_HEADER`: header-name constants (`'X-Org-Supabase-Url'`, `'X-Org-Supabase-Key'`) — kept in sync with `src/lib/server/org-supabase.ts`
+- `orgSupabaseHeaders()`: returns a fresh `{ [HEADER]: value }` object to spread into any `fetch()` call that persists data. Returns `{}` when the user hasn't connected — safe to call unconditionally.
+- `ORG_SUPABASE_SQL`: the setup SQL string shown in the Data Storage dialog. The user runs this in their own Supabase SQL editor. Creates **6 tables** — `programs`, `reasoning_sessions`, `context_blocks`, `lessons`, `user_profiles`, `analytics_events` — each with indexes and an RLS policy allowing the anon key to read/write. See [Section 11](#11-database-schema-supabase) for the full SQL.
+
+### org-supabase-sync.ts (browser-side sync)
+Direct supabase-js client for the user's OWN Supabase. Used for programs and context blocks — the large JSON blobs that would be wasteful to round-trip through HubForge's API routes. The anon key is safe to ship to the browser because RLS protects the data.
+
+- `getOrgSupabaseBrowser()`: returns a cached `SupabaseClient` (re-created only if creds change). Null if not connected.
+- `resetOrgSupabaseBrowser()`: drop the cached client — call after the user disconnects so a future reconnect uses fresh creds.
+
+**Programs:**
+- `syncProgramToSupabase(program)`: upsert into `programs` table (onConflict: `program_id`). Fire-and-forget.
+- `deleteProgramFromSupabase(programId)`: delete by `program_id`.
+- `pullProgramsFromSupabase()`: select all programs ordered by `updated_at` desc, limit 200. Returns `[]` on error or if not connected.
+
+**Context blocks:**
+- `syncBlockToSupabase(block)`: upsert by `(block_type, name)` — selects existing row first, then update or insert. Fire-and-forget.
+- `deleteBlockFromSupabase(block)`: delete by `(block_type, name)`.
+- `pullBlocksFromSupabase()`: select all blocks ordered by `updated_at` desc, limit 200.
+
+**Merge helpers (for cross-device sync):**
+- `mergePrograms(local, remote)`: returns a merged list keyed by `id`, preferring the entry with the newer `updatedAt`. Result sorted by `updatedAt` desc.
+- `mergeBlocks(local, remote)`: same logic keyed by `${type}::${name}`.
+
+### server/org-supabase.ts (server-side helper)
+Server-only module for reading org-supplied Supabase credentials from request headers and building a per-org Supabase client. Used by the three persistence API routes (`/api/memory`, `/api/profile`, `/api/analytics`). Lazy-imports `@supabase/supabase-js` so routes still load even if the package weren't installed.
+
+- `ORG_SUPABASE_URL_HEADER` / `ORG_SUPABASE_KEY_HEADER`: header-name constants (mirrored from the client-side `org-supabase.ts`)
+- `OrgSupabaseCreds` interface (`url`, `anonKey`)
+- `getOrgSupabaseCredsFromRequest(req)`: extract creds from request headers. Returns null if either header is missing or the URL doesn't pass a basic `https://host.tld` sanity check.
+- `getOrgSupabaseClient(creds)`: build (or fetch from cache) a `SupabaseClient` for the given creds.
+  - **Cache:** in-memory array keyed by `(url, anonKey)`. Bounded to **8 entries** with a **30-minute TTL** to prevent memory leaks across serverless invocations. Oldest entries are evicted when the cache is full.
+  - Returns null if `@supabase/supabase-js` can't be imported or `createClient` throws.
+- `maybeGetOrgSupabaseClient(req)`: convenience wrapper — creds from request, then client. Returns null at any point if creds are missing.
 
 ### export-utils.ts
 - `exportStrategyToWord()`: Markdown → .docx (uses `docx` library)
@@ -921,7 +1017,41 @@ interface ProviderConfig {
 
 ## 11. Database Schema (Supabase)
 
-Run `supabase-schema.sql` in your Supabase SQL editor:
+HubForge OS uses a **3-tier fallback chain** for persistence. There are two Supabase schemas (platform and org), and every persistence call tries them in order before falling back to in-memory:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Persistence fallback chain (per request to /api/memory,         │
+│ /api/profile, /api/analytics):                                  │
+│                                                                 │
+│  1. org-supabase        ─► user's OWN Supabase                  │
+│     (X-Org-Supabase-*       (programs, sessions, blocks,        │
+│      request headers)        lessons, profile, analytics)       │
+│         │                                                       │
+│         │ if missing/error, fall through                        │
+│         ▼                                                       │
+│  2. platform-supabase   ─► operator's shared Supabase           │
+│     (SUPABASE_URL /          (sessions, profile, analytics)     │
+│      SUPABASE_SERVICE_KEY)                                     │
+│         │                                                       │
+│         │ if env vars not set, fall through                     │
+│         ▼                                                       │
+│  3. in-memory store     ─► per-instance array                   │
+│                                 (lost on cold start)            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Programs and context blocks skip tiers 2 and 3 entirely on the write path — the browser talks DIRECTLY to the user's Supabase via `org-supabase-sync.ts` (no HubForge API roundtrip). localStorage is the local source of truth; the Supabase write is fire-and-forget.
+
+Each API response includes a `source` field (`'org-supabase'` | `'platform-supabase'` | `'memory'` | `'error'`) so callers can verify which path was taken.
+
+---
+
+### 11.1 Platform Supabase (operator-managed fallback)
+
+Used when the user hasn't connected their own Supabase but the operator has configured `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` env vars. Stores **3 tables** only (sessions, profiles, analytics). The admin dashboard always reads from this schema regardless of whether the user has connected their own DB.
+
+Schema SQL is in `supabase-schema.sql` at the repo root:
 
 ```sql
 -- Reasoning sessions
@@ -960,7 +1090,127 @@ CREATE TABLE analytics_events (
 );
 ```
 
-**Without Supabase:** All data falls back to in-memory (lost on redeploy). The app still works.
+---
+
+### 11.2 Org Supabase (user-owned, full data ownership)
+
+When the user connects their OWN Supabase instance via the Data Storage dialog, the app uses their database exclusively — HubForge's platform Supabase is bypassed. The user runs a setup script that creates **6 tables** so they own every piece of their data: programs, reasoning sessions, context blocks, lessons, user profile, and analytics events.
+
+**Source of truth:** the `ORG_SUPABASE_SQL` constant exported from `src/lib/org-supabase.ts`. The Data Storage dialog shows this script with a copy button. Always copy from there — the snippet below is for reference and may lag behind the constant.
+
+```sql
+-- 1. Programs — strategies, ToC, logframes
+CREATE TABLE IF NOT EXISTS programs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  program_id TEXT UNIQUE NOT NULL,
+  title TEXT,
+  status TEXT DEFAULT 'draft',
+  problem TEXT,
+  draft TEXT,
+  evaluation JSONB,
+  structured_outputs JSONB,
+  output_types JSONB,
+  feedback_history JSONB DEFAULT '[]',
+  tags JSONB DEFAULT '{}',
+  provider TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Reasoning sessions
+CREATE TABLE IF NOT EXISTS reasoning_sessions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  problem TEXT NOT NULL,
+  iterations INTEGER DEFAULT 0,
+  final_score INTEGER DEFAULT 0,
+  threshold_met BOOLEAN DEFAULT FALSE,
+  final_draft TEXT,
+  structured_outputs JSONB,
+  provider TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. Context blocks — reusable knowledge (geography, donor, sector, ...)
+CREATE TABLE IF NOT EXISTS context_blocks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  block_type TEXT NOT NULL,
+  name TEXT NOT NULL,
+  content TEXT,
+  tags JSONB DEFAULT '[]',
+  auto_saved BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. Lessons — what worked, what didn't
+CREATE TABLE IF NOT EXISTS lessons (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  program_id TEXT,
+  what_worked TEXT,
+  what_didnt_work TEXT,
+  category TEXT,
+  tags JSONB DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. User profile (this device's profile)
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  profile_id TEXT UNIQUE NOT NULL,
+  name TEXT, email TEXT, organization TEXT,
+  country TEXT, role TEXT,
+  last_seen TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  usage_count INTEGER DEFAULT 0
+);
+
+-- 6. Analytics events (the user's own private analytics)
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  profile_id TEXT,
+  session_id TEXT,
+  event_type TEXT NOT NULL,
+  event_category TEXT DEFAULT 'engagement',
+  event_data JSONB DEFAULT '{}',
+  page TEXT,
+  duration_ms INTEGER,
+  user_agent TEXT,
+  referrer TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes (one per frequently-queried column)
+CREATE INDEX IF NOT EXISTS idx_programs_status   ON programs (status);
+CREATE INDEX IF NOT EXISTS idx_programs_updated  ON programs (updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_sessions_created  ON reasoning_sessions (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_blocks_type       ON context_blocks (block_type);
+CREATE INDEX IF NOT EXISTS idx_analytics_type    ON analytics_events (event_type);
+CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics_events (created_at DESC);
+
+-- Row Level Security + anon-key access policies.
+-- The anon key is designed to be public; RLS policies below allow it to
+-- read/write all rows. Tighten further if you want per-user isolation.
+ALTER TABLE programs             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reasoning_sessions   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE context_blocks       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lessons              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE analytics_events     ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all for anon" ON programs           FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for anon" ON reasoning_sessions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for anon" ON context_blocks     FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for anon" ON lessons            FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for anon" ON user_profiles      FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for anon" ON analytics_events   FOR ALL USING (true) WITH CHECK (true);
+```
+
+---
+
+### 11.3 Without any Supabase
+
+If the user hasn't connected their own Supabase AND the operator hasn't set `SUPABASE_URL` / `SUPABASE_SERVICE_KEY`, all data falls back to **in-memory** (lost on redeploy/cold start). The app still works — programs and context blocks continue to persist in localStorage on the user's device.
 
 ---
 
@@ -1081,23 +1331,42 @@ Uses `xlsx` library.
 ## 16. Security Model
 
 ### API Key Storage
-- User API keys stored in browser `localStorage` only
-- Keys sent directly to AI provider (OpenAI, Groq, etc.) via `fetch()`
+- User AI provider keys (OpenAI, Groq, etc.) stored in browser `localStorage` only
+- Keys sent directly to AI provider via `fetch()`
 - Keys NEVER sent to HubForge OS servers
 - Keys NEVER logged to console
 
+### Org Supabase Credentials
+Users who connect their OWN Supabase instance via the Data Storage dialog store their `{ url, anonKey }` in browser `localStorage` under `hubforge.orgSupabase`.
+
+- **The anon key is designed to be public.** Row Level Security (RLS) policies on the user's tables are what actually protect the data — not secrecy of the anon key. The setup script in `ORG_SUPABASE_SQL` enables RLS and creates permissive anon policies; users can tighten these further in their Supabase dashboard if they want per-user isolation.
+- **The anon key is never sent to HubForge servers EXCEPT** as the request headers `X-Org-Supabase-Url` and `X-Org-Supabase-Key` on the three persistence API routes (`/api/memory`, `/api/profile`, `/api/analytics`). On those routes the HubForge serverless function acts as a **proxy** — it reads the headers, builds a per-org Supabase client, forwards the query to the user's DB, and returns the result. The user's data is never persisted to HubForge-operated storage during this proxy hop.
+- **Programs and context blocks skip the HubForge proxy entirely.** The browser talks directly to the user's Supabase via `org-supabase-sync.ts` (using the cached supabase-js client). No HubForge API roundtrip occurs for these large JSON blobs — this is both a privacy win (HubForge never sees the bytes) and a performance win.
+- **Server-side client cache is bounded.** The per-org Supabase client cache in `src/lib/server/org-supabase.ts` is capped at **8 entries** with a **30-minute TTL**. Oldest entries are evicted when the cache is full, preventing memory leaks across serverless invocations and bounding the worst-case memory footprint per warm instance.
+- **Sanity check on the URL.** `getOrgSupabaseCredsFromRequest()` rejects any URL that doesn't match a basic `https://host.tld` pattern, so a malicious header can't redirect the server to a file:// URL or similar.
+
 ### Input Validation
 All API routes validate inputs:
-- `problem`: required, string, max 10000 chars
-- `feedback`: required, max 5000 chars
-- `eventType`: alphanumeric + underscore only, max 100 chars
+
+- **`POST /api/run-step`** uses **step-specific validation** (see [Section 6](#6-api-routes-reference)):
+  - `PROBLEM_STEPS = { retrieval, rule, reasoning }` require `problem` (string, max 10000 chars).
+  - `DRAFT_STEPS = { critique, improvement, evaluation }` require their respective inputs instead:
+    - `critique` requires `draft`
+    - `improvement` requires `draft` + `critique`
+    - `evaluation` requires `improved`
+  - `step` itself must be one of the six known strings; anything else returns 400.
+  - This fixes a regression where critique/improvement/evaluation were incorrectly rejected with `problem is required`.
+- `POST /api/feedback`: `currentDraft` + `feedback` required, `feedback` max 5000 chars
+- `POST /api/analytics`: `eventType` alphanumeric + underscore only, max 100 chars
 - All analytics fields: sanitized with `.slice()` length limits
 - `user_agent` and `referrer`: truncated to 500 chars
+- Org-supabase URL header: must match `https://host.tld` basic pattern
 
 ### Admin Protection
 - Admin endpoints require `admin_key` query parameter
 - Default key: `hubforge-admin-2024` (change via `HUBFORGE_ADMIN_KEY` env var)
 - Wrong key returns 403
+- Admin GET on `/api/profile` and `/api/analytics` always reads from **platform-supabase only** — never from a user's org-supabase, even if the request carries org-supabase headers. This keeps the admin dashboard platform-level and prevents an admin-key holder from accidentally reading an individual user's connected DB.
 
 ### Rate Limiting
 - Not implemented (Vercel handles per-IP limits)
@@ -1105,7 +1374,7 @@ All API routes validate inputs:
 
 ### Data Encryption
 - HTTPS/TLS 1.3 in transit (Vercel default)
-- Supabase: AES-256 at rest
+- Supabase: AES-256 at rest (applies to both platform and org schemas)
 - localStorage: not encrypted (browser security model)
 
 ---
@@ -1114,13 +1383,15 @@ All API routes validate inputs:
 
 | Variable | Required | Default | Purpose |
 |----------|----------|---------|---------|
-| `SUPABASE_URL` | No | - | Supabase project URL for persistence |
-| `SUPABASE_SERVICE_KEY` | No | - | Supabase service role key |
+| `SUPABASE_URL` | No | - | Supabase project URL — **platform fallback only** |
+| `SUPABASE_SERVICE_KEY` | No | - | Supabase service role key — **platform fallback only** |
 | `HUBFORGE_ADMIN_KEY` | No | `hubforge-admin-2024` | Admin dashboard password |
 
 Copy `.env.example` to `.env.local` and fill in values.
 
-**Without any env vars:** App works with in-memory storage and default admin key.
+**`SUPABASE_URL` / `SUPABASE_SERVICE_KEY` are for the PLATFORM fallback only.** They are used by the three persistence API routes (`/api/memory`, `/api/profile`, `/api/analytics`) and by the admin dashboard when a user hasn't connected their OWN Supabase. They are never consulted when a request carries valid `X-Org-Supabase-Url` / `X-Org-Supabase-Key` headers (org-supabase takes priority). Users who connect their own Supabase via the Data Storage dialog do NOT need these env vars to be set — their data flows directly to their own database. See [Section 11](#11-database-schema-supabase) for the full 3-tier fallback chain.
+
+**Without any env vars:** App works with in-memory storage and default admin key. Users who connect their own Supabase still get full persistence even with zero env vars set.
 
 ---
 

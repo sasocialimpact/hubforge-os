@@ -328,7 +328,18 @@ export function GeekMode({ connected, providerConfig }: { connected: boolean; pr
             </CardContent>
           </Card>
 
-          {error && (<Card className="p-4 border-red-500/40 bg-red-50/30"><div className="flex items-center gap-2 text-xs text-red-600"><X className="h-4 w-4" /><span className="font-mono font-bold">ERROR</span></div><p className="mt-1 text-xs text-red-700 dark:text-red-300 font-mono break-words">{error}</p></Card>)}
+          {error && (
+            <Card className="p-4 border-red-500/40 bg-red-50/30 dark:bg-red-950/20">
+              <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400">
+                <X className="h-4 w-4 shrink-0" />
+                <span className="font-mono font-bold">ERROR</span>
+              </div>
+              <p className="mt-1 text-xs text-red-700 dark:text-red-300 font-mono break-words">{error}</p>
+              <p className="mt-2 text-[10px] text-muted-foreground">
+                The loop stopped at the step shown above. Fix the issue (e.g. add an API key in Settings, or shorten the problem) and click Run again.
+              </p>
+            </Card>
+          )}
 
           {finalRecord && (
             <Card>
