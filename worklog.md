@@ -385,3 +385,46 @@ Stage Summary:
 - The API key field was always present for all key-needing providers (zai-key, groq, openai, anthropic, gemini) — the user likely couldn't tell because the model/URL fields showed the wrong provider's values.
 - File modified: src/components/settings-dialog.tsx (handleSelectProvider function, ~10 lines changed).
 - All 7 providers verified working with correct defaults.
+
+---
+Task ID: 11
+Agent: main (Z.ai Code)
+Task: Merge Settings dialog + Command Palette (Cmd+K) into one unified Claude-style panel.
+
+Work Log:
+- Rewrote src/components/command-palette.tsx as a unified "CommandCenter" component that merges both surfaces:
+  • Search bar at top (filters commands; provider section stays visible as a form)
+  • Actions section: New Program, Switch Mode, AI Consumption, Connect Database
+  • Navigation section: Organization Profile, Help, Admin Dashboard, Privacy
+  • AI Provider section (collapsible): all 7 providers as radio buttons + inline API key/model/base URL fields
+  • Footer: keyboard hints (↑↓ navigate, ↵ select, ⌘S save provider) + Close/Save buttons
+- Updated src/app/page.tsx:
+  • Removed SettingsDialog import + usage (no longer needed)
+  • Both the Settings button AND Cmd+K now open the same CommandCenter
+  • onOpenSettings callbacks now call openCommandCenter() (same panel)
+  • UsagePanel's onOpenSettings also opens the CommandCenter
+- Design decisions (Claude-style):
+  • Single panel, not multiple stacked dialogs
+  • Search filters commands but the AI Provider form stays visible (it's a form, not a command)
+  • When searching, providers that don't match the query are hidden (so typing "openai" shows only the OpenAI provider)
+  • Provider section is collapsible (click the "AI PROVIDER" header to toggle)
+  • Save button persists the provider config and closes the panel
+  • Cmd+S keyboard shortcut also saves
+- Lint passes clean (0 errors).
+- Verified with Agent Browser + VLM:
+  • Clicking Settings button opens the CommandCenter ✅
+  • Search bar at top with "Search commands, providers, settings..." placeholder ✅
+  • Actions section: New Program, AI Consumption, Connect Database ✅
+  • Navigation section: Organization Profile, Help, Admin Dashboard, Privacy ✅
+  • AI Provider section: all 7 providers listed (Z.ai shared, Z.ai own key, Groq, OpenAI, Anthropic, Gemini, Local) with radio buttons ✅
+  • VLM confirmed: "7 provider options with radio buttons, Z.ai (shared, free) selected/highlighted, Save button visible" ✅
+  • Clicked OpenAI → API key field + model (gpt-4o-mini) + base URL (https://api.openai.com/v1) appeared inline ✅
+  • Clicked Save → provider persisted to localStorage as "openai" ✅
+  • VLM confirmed: "clean single-panel layout, Claude-like" ✅
+
+Stage Summary:
+- Settings + Cmd+K are now ONE unified panel (CommandCenter). Both the Settings button and Cmd+K open the same surface.
+- The panel has: search bar (top), action commands (filtered by search), AI provider form (always visible, collapsible), and Save/Close (footer).
+- Provider switching, API key entry, model/URL config all happen inline — no separate dialog.
+- The old SettingsDialog component is no longer imported (kept on disk for reference but unused).
+- Files modified: src/components/command-palette.tsx (rewritten as CommandCenter), src/app/page.tsx (updated to use CommandCenter instead of SettingsDialog + CommandPalette).

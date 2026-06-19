@@ -8,13 +8,12 @@ import { cn } from '@/lib/utils'
 import { socialImpactPackMeta } from '@/lib/social-impact-pack'
 import { GeneralMode } from '@/components/general-mode'
 import { GeekMode } from '@/components/geek-mode'
-import { SettingsDialog } from '@/components/settings-dialog'
 import { DataStorageDialog } from '@/components/data-storage-dialog'
 import { ProgramDashboard } from '@/components/program-dashboard'
 import { UsagePanel } from '@/components/usage-panel'
 import { InstallPrompt } from '@/components/install-prompt'
 import { FirstRunOnboarding, useShouldOnboard } from '@/components/onboarding'
-import { CommandPalette, useCommandPalette } from '@/components/command-palette'
+import { CommandCenter, useCommandPalette } from '@/components/command-palette'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getStoredProviderConfig, type ProviderConfig } from '@/lib/providers'
 import { hasOrgSupabase, type OrgSupabaseConfig } from '@/lib/org-supabase'
@@ -26,7 +25,9 @@ type Mode = 'general' | 'geek'
 export default function Home() {
   const [mode, setMode] = useState<Mode>('general')
   const [view, setView] = useState<'dashboard' | 'workspace'>('dashboard')
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  // CommandCenter replaces both SettingsDialog and CommandPalette.
+  // Opens via Cmd+K OR the Settings button.
+  const [commandCenterOpen, setCommandCenterOpen] = useState(false)
   const [dataStorageOpen, setDataStorageOpen] = useState(false)
   const [usageOpen, setUsageOpen] = useState(false)
   const [providerConfig, setProviderConfig] = useState<ProviderConfig>(() => getStoredProviderConfig())
@@ -35,21 +36,18 @@ export default function Home() {
   const [orgSupabaseRev, setOrgSupabaseRev] = useState(0)
   const shouldOnboard = useShouldOnboard()
   const [onboardingDone, setOnboardingDone] = useState(false)
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
   const connected = true
 
   useEffect(() => { analytics.appOpen() }, [])
 
-  // Register Cmd+K / Ctrl+K
-  useCommandPalette(useCallback(() => setCommandPaletteOpen(true), []))
+  // Register Cmd+K / Ctrl+K → opens the unified CommandCenter
+  useCommandPalette(useCallback(() => setCommandCenterOpen(true), []))
 
   const handleDataStorageSaved = (config: OrgSupabaseConfig | null) => {
     // Force header re-render so the green dot appears/disappears immediately.
     setOrgSupabaseRev((n) => n + 1)
     if (!config) {
-      // User disconnected — drop the cached browser client so a future
-      // reconnect creates a fresh one with the new creds.
       resetOrgSupabaseBrowser()
       track('data_storage_disconnected', { category: 'engagement' })
     } else {
@@ -62,9 +60,9 @@ export default function Home() {
     analytics.modeSwitch(newMode)
   }
 
-  const handleSettingsOpen = (open: boolean) => {
-    setSettingsOpen(open)
-    if (open) analytics.settingsOpened()
+  const openCommandCenter = () => {
+    setCommandCenterOpen(true)
+    analytics.settingsOpened()
   }
 
   const handleProviderSaved = (newConfig: ProviderConfig) => {
@@ -128,15 +126,16 @@ export default function Home() {
                 {mode === 'general' ? <><Terminal className="h-3.5 w-3.5" /><span className="hidden sm:inline">Geek</span></> : <><Wand2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">General</span></>}
               </Button>
             )}
-            <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => handleSettingsOpen(true)}>
+            {/* Settings button now opens the unified CommandCenter (same as Cmd+K) */}
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={openCommandCenter}>
               <Settings className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Settings</span>
             </Button>
-            {/* Command palette trigger */}
+            {/* Command center trigger — same panel as Settings */}
             <button
-              onClick={() => setCommandPaletteOpen(true)}
+              onClick={() => setCommandCenterOpen(true)}
               className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md border border-border text-[10px] font-mono text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-              title="Command palette (Cmd+K)"
+              title="Command center (Cmd+K)"
             >
               <kbd>Cmd</kbd> <kbd>K</kbd>
             </button>
@@ -151,7 +150,7 @@ export default function Home() {
           <ProgramDashboard
             onNewProgram={() => { setView('workspace'); setMode('general') }}
             onOpenProgram={() => { setView('workspace') }}
-            onOpenSettings={() => handleSettingsOpen(true)}
+            onOpenSettings={openCommandCenter}
             onOpenDataStorage={() => setDataStorageOpen(true)}
           />
         ) : (
@@ -185,7 +184,17 @@ export default function Home() {
         </div>
       </footer>
 
-      <SettingsDialog open={settingsOpen} onOpenChange={handleSettingsOpen} onSaved={handleProviderSaved} />
+      {/* Unified Command Center — replaces SettingsDialog + CommandPalette */}
+      <CommandCenter
+        open={commandCenterOpen}
+        onClose={() => setCommandCenterOpen(false)}
+        onSwitchMode={handleModeSwitch}
+        onProviderSaved={handleProviderSaved}
+        onNewProgram={() => { setView('workspace'); setMode('general') }}
+        onOpenDataStorage={() => setDataStorageOpen(true)}
+        onOpenUsage={() => setUsageOpen(true)}
+        currentMode={view === 'workspace' ? mode : undefined}
+      />
       <DataStorageDialog open={dataStorageOpen} onOpenChange={setDataStorageOpen} onSaved={handleDataStorageSaved} />
       <Dialog open={usageOpen} onOpenChange={setUsageOpen}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
@@ -194,20 +203,13 @@ export default function Home() {
               <Zap className="h-4 w-4 text-amber-600" /> AI Consumption
             </DialogTitle>
           </DialogHeader>
-          <UsagePanel onOpenSettings={() => handleSettingsOpen(true)} />
+          <UsagePanel onOpenSettings={openCommandCenter} />
         </DialogContent>
       </Dialog>
       <InstallPrompt />
       {shouldOnboard && !onboardingDone && (
         <FirstRunOnboarding onComplete={handleOnboardingComplete} />
       )}
-      <CommandPalette
-        open={commandPaletteOpen}
-        onClose={() => setCommandPaletteOpen(false)}
-        onSwitchMode={handleModeSwitch}
-        onOpenSettings={() => handleSettingsOpen(true)}
-        onNewProgram={() => { setView('workspace'); setMode('general') }}
-      />
     </div>
   )
 }
