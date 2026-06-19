@@ -64,3 +64,9 @@ MEL-LIFECYCLE-VISION.md
 PRODUCT-GAP-ANALYSIS.md
 UI-FIX-PLAN.md
 UX-REDESIGN.md
+upload/
+Caddyfile
+db/
+.zscripts/
+dev.log
+examples/
