@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, FileText, Clock, Trash2, Copy, Search, Sparkles, Building2 } from 'lucide-react'
+import { Plus, FileText, Clock, Trash2, Copy, Search, Sparkles, Building2, BookOpen, Utensils, Droplet, Sprout, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { PROGRAM_TEMPLATES } from '@/lib/program-templates'
 import { getPrograms, deleteProgram, duplicateProgram, PROGRAM_STATUSES, type Program } from '@/lib/programs'
 import { getOrgProfile } from '@/lib/organization'
 import { cn } from '@/lib/utils'
@@ -61,6 +62,26 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram }: ProgramDashboa
         <Button onClick={onNewProgram} className="gap-2 bg-amber-600 hover:bg-amber-700 text-white">
           <Plus className="h-4 w-4" /> New Program
         </Button>
+      </div>
+
+      {/* Templates */}
+      <div>
+        <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Start from a template (instant, no AI needed)</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          {PROGRAM_TEMPLATES.map((tpl) => {
+            const Icon = tpl.icon === 'BookOpen' ? BookOpen : tpl.icon === 'Utensils' ? Utensils : tpl.icon === 'Droplet' ? Droplet : tpl.icon === 'Sprout' ? Sprout : Heart
+            return (
+              <button key={tpl.id} onClick={() => { onNewProgram() }}
+                className="text-left rounded-lg border border-border p-3 hover:border-amber-500 hover:shadow-sm transition-all group">
+                <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-950/30 flex items-center justify-center mb-2 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                  <Icon className="h-4 w-4 text-amber-600 group-hover:text-white" />
+                </div>
+                <div className="text-xs font-medium leading-tight">{tpl.name}</div>
+                <div className="text-[9px] text-muted-foreground mt-0.5">{tpl.typicalBudget}</div>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Org context indicator */}

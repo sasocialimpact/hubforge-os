@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { BrainCircuit, Sparkles, Layers, Settings, Building2, LayoutGrid, Zap } from 'lucide-react'
+import { BrainCircuit, Sparkles, Layers, Settings, Building2, LayoutGrid, Zap, Terminal, Wand2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -96,6 +96,12 @@ export default function Home() {
             <Badge className="gap-1 bg-amber-600 hover:bg-amber-600 text-white">
               <Sparkles className="h-3 w-3" /> {socialImpactPackMeta.name}
             </Badge>
+            {/* General / Geek mode toggle - General is default for everyone, Geek for power users */}
+            {view === 'workspace' && (
+              <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => handleModeSwitch(mode === 'general' ? 'geek' : 'general')}>
+                {mode === 'general' ? <><Terminal className="h-3.5 w-3.5" /><span className="hidden sm:inline">Geek</span></> : <><Wand2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">General</span></>}
+              </Button>
+            )}
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => handleSettingsOpen(true)}>
               <Settings className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Settings</span>
