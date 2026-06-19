@@ -179,7 +179,7 @@ export function DataStorageDialog({ open, onOpenChange, onSaved }: DataStorageDi
             {showSQL && (
               <div className="space-y-2">
                 <p className="text-[10px] text-muted-foreground">
-                  Run this SQL in your Supabase Dashboard (SQL Editor -> New Query) to create the tables HubForge needs:
+                  Run this SQL in your Supabase Dashboard (SQL Editor {">"} New Query) to create the tables HubForge needs:
                 </p>
                 <div className="relative">
                   <ScrollArea className="h-48 rounded-md border border-border">
