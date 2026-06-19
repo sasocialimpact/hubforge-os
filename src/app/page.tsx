@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Settings, LayoutGrid } from 'lucide-react'
+import { Settings, LayoutGrid, Zap } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { GeneralMode } from '@/components/general-mode'
@@ -156,8 +157,8 @@ export default function Home() {
       <footer className="border-t border-border bg-background mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-[11px] font-mono text-muted-foreground">
           <div className="flex items-center gap-2">
-            <BrainCircuit className="h-3.5 w-3.5 text-amber-600" />
-            <span>HubForge OS - open-source decision intelligence infrastructure</span>
+            <img src="/hubforge-os-icon.png" alt="HubForge OS" className="h-4 w-4 rounded" />
+            <span>HubForge OS - open-source M&amp;E operating system</span>
           </div>
           <div className="flex items-center gap-4">
             <a href="/organization" className="hover:text-amber-700 dark:hover:text-amber-400">Organization</a>
@@ -199,19 +200,5 @@ export default function Home() {
         </>
       )}
     </div>
-  )
-}
-
-function ConnectionPill({ connected }: { connected: boolean }) {
-  return (
-    <span className={cn(
-      'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono',
-      connected
-        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-        : 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
-    )}>
-      <span className={cn('h-1.5 w-1.5 rounded-full', connected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500')} />
-      {connected ? 'online' : 'offline'}
-    </span>
   )
 }
