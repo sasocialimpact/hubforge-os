@@ -213,6 +213,7 @@ export default function Home() {
         onNewProgram={() => { setView('workspace'); setMode('general') }}
         onOpenDataStorage={() => setDataStorageOpen(true)}
         onOpenUsage={() => setUsageOpen(true)}
+        onOpenLanding={() => setView('landing')}
         currentMode={view === 'workspace' ? mode : undefined}
       />
       <DataStorageDialog open={dataStorageOpen} onOpenChange={setDataStorageOpen} onSaved={handleDataStorageSaved} />

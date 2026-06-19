@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Plus, FileText, Download, Settings, Terminal, Wand2, ArrowRight,
   Clock, Mic, Key, Cpu, Server, ExternalLink, Check, Eye, EyeOff, Database,
-  Zap, ChevronDown, ChevronRight, Building2,
+  Zap, ChevronDown, ChevronRight, Building2, Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -49,6 +49,7 @@ interface CommandCenterProps {
   onOpenDataStorage?: () => void
   onOpenUsage?: () => void
   onProviderSaved?: (config: ProviderConfig) => void
+  onOpenLanding?: () => void
   currentMode?: 'general' | 'geek'
   recentPrograms?: { id: string; title: string; score: number }[]
 }
@@ -60,7 +61,7 @@ const BADGE_STYLES: Record<string, string> = {
 
 export function CommandCenter({
   open, onClose, onNewProgram, onSwitchMode, onOpenDataStorage, onOpenUsage,
-  onProviderSaved, currentMode, recentPrograms = [],
+  onProviderSaved, onOpenLanding, currentMode, recentPrograms = [],
 }: CommandCenterProps) {
   const [query, setQuery] = useState('')
   const [config, setConfig] = useState<ProviderConfig>(() => getStoredProviderConfig())
@@ -115,6 +116,11 @@ export function CommandCenter({
       action: () => { window.location.href = '/organization'; onClose() }, category: 'navigation' as const,
       keywords: ['organization', 'org', 'profile', 'ngo', 'mission', 'sectors'],
     },
+    ...(onOpenLanding ? [{
+      id: 'landing', label: 'View Landing Page', hint: 'Show the marketing page', icon: Sparkles,
+      action: () => { onOpenLanding(); onClose() }, category: 'navigation' as const,
+      keywords: ['landing', 'home', 'marketing', 'about', 'overview'],
+    }] : []),
     {
       id: 'help', label: 'Help & Documentation', hint: 'Guides, FAQ, tutorials', icon: FileText,
       action: () => { window.location.href = '/help'; onClose() }, category: 'navigation' as const,
