@@ -120,19 +120,19 @@ describe('retrievalEngine', () => {
 
   test('returns decision rules', () => {
     const result = retrievalEngine('test problem', mockDecomposition as any, socialImpactPack)
-    expect(result.decisionRules.length).toBe(5)
+    expect(result.decisionRules.length).toBe(7)
     expect(result.decisionRules.some((r) => r.name === 'SMART Goal Validation')).toBe(true)
   })
 
   test('returns evidence sources', () => {
     const result = retrievalEngine('test problem', mockDecomposition as any, socialImpactPack)
-    expect(result.evidence.length).toBe(5)
+    expect(result.evidence.length).toBe(11)
     expect(result.evidence.some((e) => e.title.includes('OECD-DAC'))).toBe(true)
   })
 
   test('returns historical memory', () => {
     const result = retrievalEngine('test problem', mockDecomposition as any, socialImpactPack)
-    expect(result.historicalMemory.length).toBe(3)
+    expect(result.historicalMemory.length).toBe(8)
   })
 
   test('returns reasoning patterns', () => {
@@ -142,7 +142,7 @@ describe('retrievalEngine', () => {
 
   test('returns improvement heuristics', () => {
     const result = retrievalEngine('test problem', mockDecomposition as any, socialImpactPack)
-    expect(result.improvementHeuristics.length).toBe(6)
+    expect(result.improvementHeuristics.length).toBe(9)
   })
 
   test('filters frameworks by suggestedFrameworks when available', () => {
@@ -181,9 +181,9 @@ describe('retrievalEngine', () => {
 // Rule Engine Tests
 // ============================================================
 describe('ruleEngine', () => {
-  test('returns 5 rule checks', () => {
+  test('returns 7 rule checks', () => {
     const checks = ruleEngine('Design a water project for 500 households in Kenya', socialImpactPack)
-    expect(checks.length).toBe(5)
+    expect(checks.length).toBe(7)
   })
 
   test('SMART Goal Validation passes when measurable target present', () => {
@@ -294,32 +294,32 @@ describe('socialImpactPack', () => {
     expect(socialImpactPack.name).toBe('Social Impact Pack')
   })
 
-  test('has 6 frameworks', () => {
-    expect(socialImpactPack.frameworks.length).toBe(6)
+  test('has 8 frameworks', () => {
+    expect(socialImpactPack.frameworks.length).toBe(8)
   })
 
-  test('has 5 decision rules', () => {
-    expect(socialImpactPack.decisionRules.length).toBe(5)
+  test('has 7 decision rules', () => {
+    expect(socialImpactPack.decisionRules.length).toBe(7)
   })
 
-  test('has 5 evidence sources', () => {
-    expect(socialImpactPack.evidence.length).toBe(5)
+  test('has 11 evidence sources', () => {
+    expect(socialImpactPack.evidence.length).toBe(11)
   })
 
-  test('has 3 historical memory cases', () => {
-    expect(socialImpactPack.historicalMemory.length).toBe(3)
+  test('has 8 historical memory cases', () => {
+    expect(socialImpactPack.historicalMemory.length).toBe(8)
   })
 
   test('has 6 reasoning patterns', () => {
     expect(socialImpactPack.reasoningPatterns.length).toBe(6)
   })
 
-  test('has 6 improvement heuristics', () => {
-    expect(socialImpactPack.improvementHeuristics.length).toBe(6)
+  test('has 9 improvement heuristics', () => {
+    expect(socialImpactPack.improvementHeuristics.length).toBe(9)
   })
 
-  test('has 6 evaluation criteria with weights summing to 1.0', () => {
-    expect(socialImpactPack.evaluationCriteria.length).toBe(6)
+  test('has 7 evaluation criteria with weights summing to 1.0', () => {
+    expect(socialImpactPack.evaluationCriteria.length).toBe(7)
     const totalWeight = socialImpactPack.evaluationCriteria.reduce((sum, c) => sum + c.weight, 0)
     expect(Math.abs(totalWeight - 1.0)).toBeLessThan(0.01)
   })

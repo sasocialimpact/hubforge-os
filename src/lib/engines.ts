@@ -460,6 +460,14 @@ export function ruleEngine(problem: string, pack: DomainPack): RuleCheckResult[]
         passed = /\b(risk|threat|shock|uncertain|hazard)/i.test(p)
         note = passed ? 'Problem mentions risk explicitly.' : 'No risk language detected - Critique Engine will require risk analysis.'
         break
+      case 'Cost-Effectiveness Check':
+        passed = /\b(cost|cost-effect|cost per|value for money|vfm|per beneficiary|per dollar|benchmark)/i.test(p)
+        note = passed ? 'Problem references cost or cost-effectiveness.' : 'No cost-effectiveness language detected - Reasoning Engine must state cost per beneficiary and compare to a benchmark (e.g. GiveDirectly cash).'
+        break
+      case 'Sustainability & Exit Strategy':
+        passed = /\b(sustain|exit|handover|long-term|after funding|continue after|phase out|transition)/i.test(p)
+        note = passed ? 'Problem references sustainability or exit.' : 'No sustainability or exit language detected - Reasoning Engine must add an exit/handover plan naming the future owner, funder, and operator.'
+        break
       default:
         passed = true
         note = 'Rule checked.'
