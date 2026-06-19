@@ -80,6 +80,12 @@ export default function Home() {
               <LayoutGrid className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{view === 'dashboard' ? 'Workspace' : 'Programs'}</span>
             </Button>
+            <a href="/organization">
+              <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2">
+                <Building2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Org</span>
+              </Button>
+            </a>
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setUsageOpen(true)}>
               <Zap className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Usage</span>
