@@ -126,7 +126,8 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram }: ProgramDashboa
             <span className="text-muted-foreground">{org.sectors.join(', ')}</span>
             <span className="text-muted-foreground">-</span>
             <span className="text-muted-foreground">{org.budgetRange}</span>
-            <Badge variant="outline" className="text-[9px] ml-auto">Auto-included in all programs</Badge>
+            <Badge variant="outline" className="text-[9px]">Auto-included</Badge>
+            <a href="/organization" className="text-amber-700 dark:text-amber-400 hover:underline ml-auto">Edit</a>
           </div>
         </Card>
       ) : (
@@ -134,7 +135,7 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram }: ProgramDashboa
           <div className="flex items-center gap-2 text-xs">
             <Building2 className="h-3.5 w-3.5 text-amber-600" />
             <span className="text-muted-foreground">No organization profile set.</span>
-            <a href="/help" className="text-amber-700 dark:text-amber-400 hover:underline ml-auto">Set up organization</a>
+            <a href="/organization" className="text-amber-700 dark:text-amber-400 hover:underline ml-auto">Set up organization</a>
           </div>
         </Card>
       )}

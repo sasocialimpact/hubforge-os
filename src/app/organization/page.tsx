@@ -2,7 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, Check, Globe2, Users, DollarSign, Target, FileText, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react'
+import {
+  Building2, Check, Globe2, Users, DollarSign, Target, FileText, ArrowRight,
+  ArrowLeft, Sparkles, Pencil, Home, CheckCircle2,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,9 +19,14 @@ import {
 } from '@/lib/organization'
 import { cn } from '@/lib/utils'
 
+type View = 'summary' | 'wizard'
+
 export default function OrganizationPage() {
   const router = useRouter()
   const existing = getOrgProfile()
+  // If a profile already exists, land on the summary view (not the wizard).
+  // The user can then click "Edit details" to re-enter the wizard.
+  const [view, setView] = useState<View>(existing ? 'summary' : 'wizard')
   const [step, setStep] = useState(1)
   const [profile, setProfile] = useState<OrganizationProfile>(() => existing || {
     id: `org-${Date.now()}`, name: '', type: 'NGO (National)', registrationCountry: '',
@@ -48,20 +56,108 @@ export default function OrganizationPage() {
 
   const handleSave = () => {
     storeOrgProfile({ ...profile, updatedAt: new Date().toISOString() })
-    router.push('/')
+    setView('summary')
   }
 
   const canContinue1 = profile.name.trim().length > 0
   const canContinue2 = profile.operatingCountries.length > 0 || profile.registrationCountry.trim().length > 0
   const canSave = profile.mission.trim().length > 0
 
+  // ───────────────────────────────────────────────────────────────────────
+  // SUMMARY VIEW — shown when the user already has a saved org profile.
+  // This is the fix for the "I see a fresh flow every time" bug.
+  // ───────────────────────────────────────────────────────────────────────
+  if (view === 'summary' && existing) {
+    const p = existing
+    return (
+      <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
+        <header className="border-b border-border bg-background">
+          <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+            <button onClick={() => router.push('/')} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-4 w-4" /> Back
+            </button>
+            <Badge variant="outline" className="gap-1 text-[10px] border-emerald-500/40 text-emerald-700 dark:text-emerald-300">
+              <CheckCircle2 className="h-3 w-3" /> Profile saved
+            </Badge>
+          </div>
+        </header>
+
+        <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-5">
+          {/* Hero */}
+          <div className="flex items-center gap-2 mb-1">
+            <Building2 className="h-5 w-5 text-amber-600" />
+            <h1 className="text-xl font-bold">{p.name || 'Your organization'}</h1>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            This context is automatically included in every strategy you build. Last updated{' '}
+            {p.updatedAt ? new Date(p.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'recently'}.
+          </p>
+
+          {/* Identity */}
+          <Card className="p-5 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">
+              <Building2 className="h-3.5 w-3.5" /> Identity
+            </div>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div><dt className="text-[10px] uppercase text-muted-foreground">Type</dt><dd>{p.type}</dd></div>
+              <div><dt className="text-[10px] uppercase text-muted-foreground">Registered in</dt><dd>{p.registrationCountry || '—'}</dd></div>
+              <div className="sm:col-span-2"><dt className="text-[10px] uppercase text-muted-foreground">Sectors</dt><dd>{p.sectors.length ? p.sectors.join(', ') : '—'}</dd></div>
+              {p.mission && <div className="sm:col-span-2"><dt className="text-[10px] uppercase text-muted-foreground">Mission</dt><dd>{p.mission}</dd></div>}
+            </dl>
+          </Card>
+
+          {/* Operations */}
+          <Card className="p-5 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">
+              <Globe2 className="h-3.5 w-3.5" /> Operations
+            </div>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div><dt className="text-[10px] uppercase text-muted-foreground">Operating countries</dt><dd>{p.operatingCountries.length ? p.operatingCountries.join(', ') : '—'}</dd></div>
+              <div><dt className="text-[10px] uppercase text-muted-foreground">Geographies</dt><dd>{p.operatingGeographies || '—'}</dd></div>
+              <div><dt className="text-[10px] uppercase text-muted-foreground">Languages</dt><dd>{p.languages || '—'}</dd></div>
+              <div><dt className="text-[10px] uppercase text-muted-foreground">Team size</dt><dd>{p.teamSize}</dd></div>
+              <div><dt className="text-[10px] uppercase text-muted-foreground">Annual budget</dt><dd>{p.budgetRange}</dd></div>
+              <div><dt className="text-[10px] uppercase text-muted-foreground">M&E capacity</dt><dd>{p.meCapacity}</dd></div>
+            </dl>
+          </Card>
+
+          {/* Donors & past results */}
+          <Card className="p-5 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">
+              <FileText className="h-3.5 w-3.5" /> Donors & past results
+            </div>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div><dt className="text-[10px] uppercase text-muted-foreground">Key donors</dt><dd>{p.keyDonors || '—'}</dd></div>
+              <div><dt className="text-[10px] uppercase text-muted-foreground">Reporting frameworks</dt><dd>{p.reportingFrameworks || '—'}</dd></div>
+              {p.pastResults && <div className="sm:col-span-2"><dt className="text-[10px] uppercase text-muted-foreground">Past results</dt><dd className="whitespace-pre-line">{p.pastResults}</dd></div>}
+            </dl>
+          </Card>
+
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row gap-2 pt-2">
+            <Button onClick={() => router.push('/')} variant="outline" className="flex-1 h-11 gap-2">
+              <Home className="h-4 w-4" /> Back to app
+            </Button>
+            <Button onClick={() => { setView('wizard'); setStep(1) }} className="flex-1 h-11 gap-2 bg-amber-600 hover:bg-amber-700 text-white">
+              <Pencil className="h-4 w-4" /> Edit details
+            </Button>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // ───────────────────────────────────────────────────────────────────────
+  // WIZARD VIEW — 3-step setup. Shown for first-time users OR when the user
+  // clicks "Edit details" from the summary view.
+  // ───────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
       {/* Top bar */}
       <header className="border-b border-border bg-background">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <button onClick={() => router.push('/')} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> Back
+          <button onClick={() => existing ? setView('summary') : router.push('/')} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> {existing ? 'Back to summary' : 'Back'}
           </button>
           <div className="flex items-center gap-2">
             {[1, 2, 3].map((s) => (
@@ -82,7 +178,7 @@ export default function OrganizationPage() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Building2 className="h-5 w-5 text-amber-600" />
-                <h1 className="text-xl font-bold">Tell us about your organization</h1>
+                <h1 className="text-xl font-bold">{existing ? 'Edit organization details' : 'Tell us about your organization'}</h1>
               </div>
               <p className="text-sm text-muted-foreground">This is used automatically in every strategy. Set once, used everywhere.</p>
             </div>
@@ -254,7 +350,7 @@ export default function OrganizationPage() {
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep(2)} className="gap-1.5"><ArrowLeft className="h-4 w-4" /> Back</Button>
               <Button onClick={handleSave} className="flex-1 h-11 gap-2 bg-amber-600 hover:bg-amber-700 text-white">
-                <Check className="h-4 w-4" /> Save & start building
+                <Check className="h-4 w-4" /> Save
               </Button>
             </div>
           </div>

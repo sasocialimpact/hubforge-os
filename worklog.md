@@ -199,3 +199,31 @@ Stage Summary:
   • AUDIT-REPORT.md — rewritten to current state (READY TO DEPLOY status)
 - The fix is definitively verified: curl test shows critique step returns HTTP 200 with proper critique issues (was HTTP 400 "problem is required" before the fix).
 - Files modified: src/app/api/run-step/route.ts, src/components/geek-mode.tsx, README.md, DEVELOPER.md, AUDIT-REPORT.md
+
+---
+Task ID: 6
+Agent: main (Z.ai Code)
+Task: Fix "org once entered & saved, if I go back I see fresh flow" bug — the organization page always showed the setup wizard from step 1 even when a profile was already saved.
+
+Work Log:
+- Root-caused the bug: src/app/organization/page.tsx always initialized `step` to 1 and showed the 3-step wizard regardless of whether getOrgProfile() returned a saved profile. The saved data WAS loaded into the form fields (via useState lazy init), but the user saw "Tell us about your organization" heading — looked like starting over.
+- Found a secondary bug: the dashboard's "Set up organization" link pointed to /help instead of /organization (in program-dashboard.tsx line 137).
+- Fixed program-dashboard.tsx: changed "Set up organization" link from /help to /organization. Also added an "Edit" link to the org context card (shown when org profile exists) so users can edit their profile directly from the dashboard.
+- Rewrote src/app/organization/page.tsx with a two-view system:
+  • SUMMARY VIEW (new): shown when a profile already exists. Displays the org name as heading, a "Profile saved" badge, 3 cards (Identity, Operations, Donors & past results) with all saved data in definition-list format, and two buttons: "Back to app" and "Edit details".
+  • WIZARD VIEW (existing 3-step flow): shown for first-time users OR when the user clicks "Edit details" from the summary. Heading changes to "Edit organization details" (not "Tell us about..."), Back button says "Back to summary" (not "Back").
+- The view state is managed by `useState<View>(existing ? 'summary' : 'wizard')` — if a profile exists on page load, lands on summary; otherwise lands on wizard.
+- handleSave() now calls `setView('summary')` instead of `router.push('/')` — after saving, the user sees their saved profile summary (confirming the save worked), not the dashboard.
+- Lint passes clean (0 errors).
+- Verified end-to-end with Agent Browser:
+  • First visit (no profile): correctly shows wizard from step 1.
+  • Set org profile via localStorage, revisit /organization: correctly shows SUMMARY VIEW with org name "REAP" as heading, "Profile saved" badge, 3 data cards, "Back to app" + "Edit details" buttons. VLM confirmed all 5 elements visible.
+  • Clicked "Edit details": correctly enters wizard at step 1 with heading "Edit organization details", Back button says "Back to summary", all form fields pre-filled with saved data (name, type, country all populated).
+  • Dashboard org card: "Edit" link confirmed visible via eval (23.25×16px, amber color, href=/organization, visible:true).
+- Had to deal with persistent service worker caching old page bundles — unregistered SW, blocked /sw.js route, cleared browser caches to get fresh compilation loaded. This is a sandbox dev environment issue, not a code issue.
+
+Stage Summary:
+- BUG FIXED: Organization page now shows a summary view when a profile exists (instead of re-showing the setup wizard from step 1). Users can click "Edit details" to re-enter the wizard with all fields pre-filled, or "Back to app" to return to the dashboard.
+- SECONDARY FIX: Dashboard "Set up organization" link now correctly points to /organization (was /help). Dashboard org context card now has an "Edit" link for quick access to edit the profile.
+- Files modified: src/app/organization/page.tsx (rewritten with summary/wizard view system), src/components/program-dashboard.tsx (fixed /help→/organization link, added Edit link to org card).
+- Lint clean, browser-verified, VLM-confirmed.
