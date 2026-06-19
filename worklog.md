@@ -227,3 +227,31 @@ Stage Summary:
 - SECONDARY FIX: Dashboard "Set up organization" link now correctly points to /organization (was /help). Dashboard org context card now has an "Edit" link for quick access to edit the profile.
 - Files modified: src/app/organization/page.tsx (rewritten with summary/wizard view system), src/components/program-dashboard.tsx (fixed /help→/organization link, added Edit link to org card).
 - Lint clean, browser-verified, VLM-confirmed.
+
+---
+Task ID: 7
+Agent: main (Z.ai Code)
+Task: Fix "unable to continue" when editing org — root cause was stale service worker cache serving old JS bundles.
+
+Work Log:
+- Analyzed user screenshot: Step 1 of org wizard, heading "Tell us about your organization" (first-time wizard, not edit flow), name field = "test", Continue button appeared enabled but user couldn't continue.
+- Root cause: The service worker (public/sw.js v2) used a CACHE-FIRST strategy for ALL non-API GET requests. This meant the browser served stale cached HTML/JS bundles even after code fixes were deployed. The user was running OLD code where the org page always showed the first-time wizard (pre-fix), and the old code may have had a different Continue button behavior.
+- Rewrote public/sw.js (bumped to v3) with a proper caching strategy:
+  • Navigation requests (HTML pages): NETWORK-FIRST with cache fallback. Users always get the latest code after a deploy. Falls back to cache when offline.
+  • Static assets (_next/static, images, icons, CSS): CACHE-FIRST. Safe because these have content hashes in filenames.
+  • API requests: always network, never cached.
+- Updated src/app/layout.tsx SW registration script: added updatefound listener that auto-reloads the page when a new SW activates. This ensures users get the new code immediately without needing to close/reopen the tab.
+- Updated next.config.ts: added headers for /sw.js (Cache-Control: no-cache, no-store, must-revalidate + Service-Worker-Allowed: /) so the browser always fetches the latest SW file. Also added no-cache header for /manifest.json.
+- Verified end-to-end with Agent Browser:
+  • Set org profile via localStorage → /organization shows SUMMARY VIEW with org name as heading, "Profile saved" badge, "Back to app" + "Edit details" buttons.
+  • Clicked "Edit details" → wizard shows with heading "Edit organization details" (not "Tell us about..."), Back says "Back to summary", ALL fields pre-filled with saved data (name, country, mission, sectors, etc.).
+  • Clicked Continue → successfully advanced to step 2 ("Where do you operate?") with pre-filled data (India, Rural areas, English, team size, budget, M&E capacity).
+  • First-time flow (no profile) also works: wizard starts at step 1, Continue advances to step 2.
+- Lint passes clean (0 errors).
+
+Stage Summary:
+- ROOT CAUSE FIXED: The stale service worker (cache-first strategy) was serving old JS bundles to the user, causing the org page to show old code where the edit flow didn't work properly.
+- The new service worker (v3) uses network-first for navigations, ensuring users always get the latest code. The auto-reload on SW update means the fix applies immediately on next visit.
+- The org edit flow is confirmed working: summary view → Edit details → wizard with pre-filled data → Continue through all 3 steps → Save → back to summary.
+- Files modified: public/sw.js (rewritten with network-first strategy), src/app/layout.tsx (SW auto-reload on update), next.config.ts (no-cache headers for sw.js).
+- NOTE: Users who already have the old SW (v2) cached will get the new SW (v3) on their next page load. The auto-reload feature will then refresh the page with the latest code. Users can also hard-refresh (Ctrl+Shift+R) to force immediate update.

@@ -31,7 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').then(function(){},function(e){console.warn('[PWA] SW failed:',e)})})}` }} />
+        <script dangerouslySetInnerHTML={{ __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').then(function(reg){reg.addEventListener('updatefound',function(){var nw=reg.installing;if(nw){nw.addEventListener('statechange',function(){if(nw.state==='activated'&&navigator.serviceWorker.controller){location.reload()}})})}},function(e){console.warn('[PWA] SW failed:',e)})})}` }} />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
         {children}
