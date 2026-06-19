@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 
 interface LandingPageProps {
   onLaunch: () => void
+  onSignIn?: () => void
 }
 
 const FEATURES = [
@@ -78,7 +79,7 @@ const PIPELINE_STEPS = [
   { name: 'Structure', desc: 'ToC + Logframe' },
 ]
 
-export function LandingPage({ onLaunch }: LandingPageProps) {
+export function LandingPage({ onLaunch, onSignIn }: LandingPageProps) {
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
@@ -105,9 +106,16 @@ export function LandingPage({ onLaunch }: LandingPageProps) {
             <a href="#pipeline" className="hover:text-foreground transition-colors">Pipeline</a>
             <a href="#how" className="hover:text-foreground transition-colors">How it works</a>
           </div>
-          <Button onClick={onLaunch} size="sm" className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white">
-            Launch App <ArrowRight className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            {onSignIn && (
+              <Button onClick={onSignIn} variant="ghost" size="sm" className="text-xs">
+                Sign in
+              </Button>
+            )}
+            <Button onClick={onLaunch} size="sm" className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white">
+              Launch App <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </nav>
 

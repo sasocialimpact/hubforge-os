@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Settings, LayoutGrid, Zap } from 'lucide-react'
+import { Settings, LayoutGrid, Zap, User } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -14,6 +14,8 @@ import { UsagePanel } from '@/components/usage-panel'
 import { InstallPrompt } from '@/components/install-prompt'
 import { FirstRunOnboarding, useShouldOnboard } from '@/components/onboarding'
 import { CommandCenter, useCommandPalette } from '@/components/command-palette'
+import { AuthDialog } from '@/components/auth-dialog'
+import { isLoggedIn, getDisplayEmail, getInitials } from '@/lib/auth'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getStoredProviderConfig, type ProviderConfig } from '@/lib/providers'
 import { hasOrgSupabase, type OrgSupabaseConfig } from '@/lib/org-supabase'
@@ -41,6 +43,12 @@ export default function Home() {
   // Bump this counter to force the header to re-check hasOrgSupabase() after
   // the user saves/disconnects in the DataStorageDialog.
   const [orgSupabaseRev, setOrgSupabaseRev] = useState(0)
+  // Auth: bump this counter to force re-render after login/logout.
+  // The auth state itself lives in localStorage (src/lib/auth.ts); this
+  // counter just tells React "something changed, re-read isLoggedIn()."
+  const [authRev, setAuthRev] = useState(0)
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<'signup' | 'login' | 'account'>('signup')
   const shouldOnboard = useShouldOnboard()
   const [onboardingDone, setOnboardingDone] = useState(false)
 
@@ -96,7 +104,10 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-stone-50 dark:bg-stone-950 text-stone-900 dark:text-stone-100">
       {/* ── Landing page (full-screen, no app header) ── */}
       {view === 'landing' ? (
-        <LandingPage onLaunch={handleLaunch} />
+        <LandingPage
+          onLaunch={handleLaunch}
+          onSignIn={() => { setAuthMode('login'); setAuthOpen(true) }}
+        />
       ) : (
         <>
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -110,7 +121,7 @@ export default function Home() {
             </div>
           </button>
 
-          {/* Jobs discipline: 3 buttons. Everything else lives in Cmd+K. */}
+          {/* Jobs discipline: 3 buttons + identity. Everything else lives in Cmd+K. */}
           <div className="ml-auto flex items-center gap-2">
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setView(view === 'dashboard' ? 'workspace' : 'dashboard')}>
               <LayoutGrid className="h-3.5 w-3.5" />
@@ -128,6 +139,28 @@ export default function Home() {
               <kbd>⌘</kbd><kbd>K</kbd>
               {orgSupabaseRev >= 0 && hasOrgSupabase() && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 ml-0.5" />}
             </button>
+            {/* Identity: Sign in (logged out) or Account avatar (logged in) */}
+            {authRev >= 0 && isLoggedIn() ? (
+              <button
+                onClick={() => { setAuthMode('account'); setAuthOpen(true) }}
+                className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full border border-border hover:border-amber-500/40 hover:bg-muted/50 transition-colors"
+                title={getDisplayEmail() || 'Account'}
+              >
+                <div className="h-6 w-6 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-[10px] font-bold">
+                  {getInitials()}
+                </div>
+                <span className="hidden sm:inline text-xs font-medium max-w-[120px] truncate">{getDisplayEmail()}</span>
+              </button>
+            ) : (
+              <Button
+                size="sm"
+                className="gap-1.5 text-xs px-3 bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={() => { setAuthMode('signup'); setAuthOpen(true) }}
+              >
+                <User className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Sign in</span>
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -197,6 +230,14 @@ export default function Home() {
       {shouldOnboard && !onboardingDone && (
         <FirstRunOnboarding onComplete={handleOnboardingComplete} />
       )}
+      {/* Auth dialog — signup/login/account. onAuthChange bumps authRev to force header re-render. */}
+      <AuthDialog
+        key={`${authMode}-${authOpen}`}
+        open={authOpen}
+        onOpenChange={setAuthOpen}
+        initialMode={authMode}
+        onAuthChange={() => setAuthRev((n) => n + 1)}
+      />
         </>
       )}
     </div>

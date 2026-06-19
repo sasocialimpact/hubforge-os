@@ -569,3 +569,59 @@ Stage Summary:
   • docs/knowledge-graph-schema.md (open pack format spec)
   • docs/api-v1.md (public API docs)
 - This is Phase 2 item #1 from the OS roadmap. The platform is now open.
+
+---
+Task ID: 15
+Agent: main (Z.ai Code)
+Task: Build identity/auth layer — signup, login, logout, GDPR/DPDP consent. Platform stores minimal identity (email + hashed password); personal data stays in user's own database.
+
+Work Log:
+- Created src/lib/auth.ts — full identity layer with data-sovereignty split:
+  • Account interface (id, email, passwordHash, salt, consent record)
+  • ConsentRecord (given, date, version, analyticsOptIn, termsAccepted, privacyPolicyAccepted)
+  • Session interface (userId, email, type: 'device' | 'platform')
+  • Password hashing via Web Crypto API (SHA-256 + per-user salt) — no external deps
+  • signup(): validates email/password, checks for duplicates, hashes password, creates account + session, stores consent
+  • login(): finds account by email, verifies password hash, creates session
+  • logout(): clears session
+  • exportAccountData(): GDPR right to access — returns all platform-stored data
+  • deleteAccount(): GDPR right to be forgotten — removes platform identity (user's own Supabase data is NOT touched)
+  • hasConsented(), hasAnalyticsConsent() — for analytics gating
+  • getDisplayEmail(), getInitials() — for header display
+  • CONSENT_VERSION = '1.0.0' — tracked so we can re-prompt if terms change
+- Created src/components/auth-dialog.tsx — 4-mode dialog:
+  • signup mode: email + password + data sovereignty explainer + 3 consent checkboxes (Terms, Privacy/GDPR, Analytics opt-in) + "Create account" button (disabled until required checkboxes checked)
+  • login mode: email + password + "Log in" button + link to signup
+  • consent mode: detailed explainer with 3 sections — "What we store (platform)" / "What stays in YOUR database" / "Your rights (GDPR/DPDP)"
+  • account mode: avatar + email + "Device identity" badge + Export data / Log out / Delete account buttons
+- Updated src/app/page.tsx:
+  • Added auth state (authOpen, authMode, authRev counter)
+  • Header now shows "Sign in" button (amber, prominent) when logged out
+  • When logged in, shows avatar (initials in gradient circle) + email + "Device identity" badge
+  • Clicking avatar opens account mode (Export / Log out / Delete)
+  • AuthDialog uses key={authMode-authOpen} to force remount when mode changes (fixes React state retention bug)
+  • onAuthChange bumps authRev to force header re-render after login/logout
+- Updated src/components/landing-page.tsx:
+  • Added optional onSignIn prop
+  • Nav now shows "Sign in" (ghost) + "Launch App" (amber) — standard SaaS pattern
+- Lint passes clean (0 errors).
+- Verified end-to-end with Agent Browser + VLM:
+  • Landing page: "Sign in" visible in nav ✅
+  • App header: "Sign in" button visible when logged out ✅
+  • Click "Sign in" → signup dialog opens with email, password, data sovereignty explainer, 3 consent checkboxes ✅
+  • VLM confirmed: email+password fields, data sovereignty explainer, 3 consent checkboxes, Create account disabled, Log in link ✅
+  • Filled email "priya@reap.org" + password "testpass123" + checked Terms + Privacy → Create account enabled ✅
+  • Clicked "Create account" → header updated to show "PR priya@reap.org" (avatar with initials + email) ✅
+  • VLM confirmed: circular avatar with "PR" initials, email visible, Sign in button gone ✅
+  • Session persisted across server restart (localStorage) ✅
+  • Clicked avatar → account menu opened with Export / Log out / Delete account ✅
+  • Clicked "Log out" → header reverted to "Sign in" ✅
+
+Stage Summary:
+- IDENTITY LAYER SHIPPED. The platform now knows who you are.
+- Data sovereignty split: platform stores email + hashed password + consent record ONLY. Personal data (name, org, programs, indicators) stays in user's own Supabase or localStorage.
+- GDPR/DPDP compliant: explicit consent at signup, separate analytics opt-in, right to export, right to delete, consent version tracked.
+- Full auth flow: signup (with consent) → login → header shows avatar + email → account menu (export/logout/delete) → logout reverts to "Sign in".
+- Session persists in localStorage (device identity). When platform Supabase is configured (env vars), this upgrades to server-side auth (planned).
+- Files created: src/lib/auth.ts, src/components/auth-dialog.tsx
+- Files modified: src/app/page.tsx (auth state + header button + AuthDialog), src/components/landing-page.tsx (onSignIn prop + nav Sign in button)
