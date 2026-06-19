@@ -2,10 +2,15 @@
 // Every call is tracked for consumption visibility.
 import type { ProviderConfig, OutputType, ClarifyingQuestion, StructuredOutputs, EvaluationResult, Decomposition } from './types'
 import { trackUsage } from './usage-tracker'
+import { orgSupabaseHeaders } from './org-supabase'
 
 async function apiCall(path: string, body: any): Promise<any> {
   const start = Date.now()
-  const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...orgSupabaseHeaders() },
+    body: JSON.stringify(body),
+  })
   if (!res.ok) { const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` })); throw new Error(err.error || `Request failed: ${res.status}`) }
   const json = await res.json()
   // Track usage (client-side, for the user to see their consumption)
@@ -49,10 +54,16 @@ export async function callWebSearch(problem: string, decomposition: any, provide
   return apiCall('/api/search', { problem, decomposition, providerConfig })
 }
 export async function getMemory(): Promise<any[]> {
-  try { const res = await fetch('/api/memory'); const data = await res.json(); return data.memory ?? [] } catch { return [] }
+  try {
+    const res = await fetch('/api/memory', { headers: { ...orgSupabaseHeaders() } })
+    const data = await res.json()
+    return data.memory ?? []
+  } catch { return [] }
 }
 export async function clearMemory(): Promise<void> {
-  try { await fetch('/api/memory', { method: 'DELETE' }) } catch {}
+  try {
+    await fetch('/api/memory', { method: 'DELETE', headers: { ...orgSupabaseHeaders() } })
+  } catch {}
 }
 export async function saveMemory(record: any): Promise<void> {
   try { await apiCall('/api/memory', { record }) } catch {}

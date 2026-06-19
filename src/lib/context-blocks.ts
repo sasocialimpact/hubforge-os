@@ -1,5 +1,15 @@
 // Context Blocks - reusable knowledge blocks (geography, donor, sector).
 // Saved once, reused across programs. Auto-loaded into reasoning context.
+// When the user connects their own Supabase, every save/delete also upserts/
+// deletes in THEIR database, and on app load we pull from their Supabase so
+// blocks sync across devices/browsers.
+
+import {
+  syncBlockToSupabase,
+  deleteBlockFromSupabase,
+  pullBlocksFromSupabase,
+  mergeBlocks,
+} from './org-supabase-sync'
 
 export interface ContextBlock {
   id: string
@@ -37,15 +47,36 @@ export function saveBlock(block: ContextBlock): void {
     if (idx >= 0) blocks[idx] = updated
     else blocks.unshift(updated)
     localStorage.setItem(BLOCKS_KEY, JSON.stringify(blocks))
+    // Fire-and-forget sync to user's own Supabase (no-op if not connected).
+    void syncBlockToSupabase(updated)
   } catch {}
 }
 
 export function deleteBlock(id: string): void {
   if (typeof window === 'undefined') return
   try {
+    const block = getBlock(id)
     const blocks = getBlocks().filter((b) => b.id !== id)
     localStorage.setItem(BLOCKS_KEY, JSON.stringify(blocks))
+    // Fire-and-forget delete from user's own Supabase.
+    if (block) void deleteBlockFromSupabase(block)
   } catch {}
+}
+
+/**
+ * Pull context blocks from the user's own Supabase (if connected) and merge.
+ * Returns the merged list. Call on app mount.
+ */
+export async function syncBlocksFromSupabase(): Promise<ContextBlock[]> {
+  if (typeof window === 'undefined') return []
+  const remote = await pullBlocksFromSupabase()
+  if (remote.length === 0) return getBlocks()
+  const local = getBlocks()
+  const merged = mergeBlocks(local, remote)
+  try {
+    localStorage.setItem(BLOCKS_KEY, JSON.stringify(merged))
+  } catch {}
+  return merged
 }
 
 export function createBlock(data: Partial<ContextBlock>): ContextBlock {

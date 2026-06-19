@@ -17,8 +17,9 @@ import { FirstRunOnboarding, useShouldOnboard } from '@/components/onboarding'
 import { CommandPalette, useCommandPalette } from '@/components/command-palette'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getStoredProviderConfig, type ProviderConfig } from '@/lib/providers'
-import { hasOrgSupabase } from '@/lib/org-supabase'
-import { analytics } from '@/lib/analytics'
+import { hasOrgSupabase, type OrgSupabaseConfig } from '@/lib/org-supabase'
+import { resetOrgSupabaseBrowser } from '@/lib/org-supabase-sync'
+import { analytics, track } from '@/lib/analytics'
 
 type Mode = 'general' | 'geek'
 
@@ -29,6 +30,9 @@ export default function Home() {
   const [dataStorageOpen, setDataStorageOpen] = useState(false)
   const [usageOpen, setUsageOpen] = useState(false)
   const [providerConfig, setProviderConfig] = useState<ProviderConfig>(() => getStoredProviderConfig())
+  // Bump this counter to force the header to re-check hasOrgSupabase() after
+  // the user saves/disconnects in the DataStorageDialog.
+  const [orgSupabaseRev, setOrgSupabaseRev] = useState(0)
   const shouldOnboard = useShouldOnboard()
   const [onboardingDone, setOnboardingDone] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
@@ -39,6 +43,19 @@ export default function Home() {
 
   // Register Cmd+K / Ctrl+K
   useCommandPalette(useCallback(() => setCommandPaletteOpen(true), []))
+
+  const handleDataStorageSaved = (config: OrgSupabaseConfig | null) => {
+    // Force header re-render so the green dot appears/disappears immediately.
+    setOrgSupabaseRev((n) => n + 1)
+    if (!config) {
+      // User disconnected — drop the cached browser client so a future
+      // reconnect creates a fresh one with the new creds.
+      resetOrgSupabaseBrowser()
+      track('data_storage_disconnected', { category: 'engagement' })
+    } else {
+      track('data_storage_connected', { category: 'engagement' })
+    }
+  }
 
   const handleModeSwitch = (newMode: Mode) => {
     setMode(newMode)
@@ -92,7 +109,8 @@ export default function Home() {
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setDataStorageOpen(true)}>
               <Database className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Data</span>
-              {hasOrgSupabase() && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+              {/* orgSupabaseRev is read here so React re-renders on save/disconnect */}
+              {orgSupabaseRev >= 0 && hasOrgSupabase() && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
             </Button>
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setUsageOpen(true)}>
               <Zap className="h-3.5 w-3.5" />
@@ -166,7 +184,7 @@ export default function Home() {
       </footer>
 
       <SettingsDialog open={settingsOpen} onOpenChange={handleSettingsOpen} onSaved={handleProviderSaved} />
-      <DataStorageDialog open={dataStorageOpen} onOpenChange={setDataStorageOpen} />
+      <DataStorageDialog open={dataStorageOpen} onOpenChange={setDataStorageOpen} onSaved={handleDataStorageSaved} />
       <Dialog open={usageOpen} onOpenChange={setUsageOpen}>
         <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>

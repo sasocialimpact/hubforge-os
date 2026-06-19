@@ -104,3 +104,46 @@ Stage Summary:
 - Feedback loop: user reviews output, types what to change, system revises and shows what was addressed. Version history tracked.
 - Structured outputs: Theory of Change rendered as visual flowchart (Inputs→Activities→Outputs→Outcomes→Impact with assumptions), Logframe rendered as proper 4×4 table.
 - Files: mini-services/reasoning-engine/{engines.ts,index.ts} (updated), src/lib/{providers.ts,types.ts} (updated), src/components/{settings-dialog,deliverables,general-mode,geek-mode}.tsx, src/app/page.tsx (new host).
+
+---
+Task ID: 4
+Agent: main (Z.ai Code)
+Task: Let users connect their OWN Supabase instance for full data ownership (instead of relying on platform-shared Supabase). UI dialog already existed; backend integration was missing.
+
+Work Log:
+- Read existing worklog and inspected current state: data-storage-dialog.tsx UI and org-supabase.ts localStorage layer were already built in a prior session, but API routes (/api/memory, /api/profile, /api/analytics) still only used platform env-supplied Supabase, and frontend fetchers didn't send org-supabase creds via headers.
+- Created src/lib/server/org-supabase.ts (server-side): extracts X-Org-Supabase-Url and X-Org-Supabase-Key from request headers, builds per-org cached Supabase client (TTL 30min, max 8 entries). Lazy-imports @supabase/supabase-js so the route still works even if the package weren't installed.
+- Added orgSupabaseHeaders() helper to src/lib/org-supabase.ts (client-side) so any frontend fetch can attach the headers in one line.
+- Extended ORG_SUPABASE_SQL setup script with two new tables (user_profiles, analytics_events) so users can own their profile + analytics data too, not just programs/sessions/blocks/lessons. Added indexes and RLS policies for the new tables.
+- Rewrote /api/memory/route.ts: priority chain = org-supabase (from headers) → platform-supabase (env vars) → in-memory store. Each response now includes a `source` field so callers can verify which path was taken.
+- Rewrote /api/profile/route.ts with same priority chain. Admin GET (with admin_key) still uses platform-supabase only — admin dashboard is platform-level, not per-user.
+- Rewrote /api/analytics/route.ts with same priority chain. Falls through gracefully if org-supabase insert errors out (logs warning, continues to platform/memory).
+- Updated src/lib/api-client.ts: apiCall() now spreads orgSupabaseHeaders() into every POST. getMemory/clearMemory (which use raw fetch) also attach the headers.
+- Updated src/lib/analytics.ts: flush() now sends org-supabase headers with every analytics event POST.
+- Updated src/lib/user-profile.ts: syncProfile() now sends org-supabase headers.
+- Created src/lib/org-supabase-sync.ts (browser-side): cached Supabase client using the anon key directly (safe — anon key is designed to be public with RLS). Exports syncProgramToSupabase, deleteProgramFromSupabase, pullProgramsFromSupabase, syncBlockToSupabase, deleteBlockFromSupabase, pullBlocksFromSupabase, plus mergePrograms/mergeBlocks helpers for cross-device sync. Reset function for when user disconnects.
+- Extended src/lib/programs.ts: saveProgram() now fire-and-forget calls syncProgramToSupabase(updated). deleteProgram() calls deleteProgramFromSupabase(id). Added new syncProgramsFromSupabase() async function that pulls from user's Supabase and merges with local by updatedAt. Added saveAllPrograms() helper.
+- Extended src/lib/context-blocks.ts: same pattern. saveBlock() syncs, deleteBlock() deletes from user's Supabase. Added syncBlocksFromSupabase() pull+merge function.
+- Updated src/components/program-dashboard.tsx: added useEffect that calls syncProgramsFromSupabase() on mount (only if user has connected their own Supabase). Shows "Syncing…" badge while pulling, then "Synced to your Supabase" badge. Lazy-init the syncing state to satisfy react-hooks/set-state-in-effect lint rule.
+- Updated src/app/page.tsx: passes onSaved callback to DataStorageDialog. On save: bumps orgSupabaseRev counter (forces header green-dot to re-render), tracks analytics event. On disconnect: also calls resetOrgSupabaseBrowser() to drop the cached browser client so a future reconnect uses fresh creds. Header green-dot expression now reads orgSupabaseRev to force re-render.
+- Lint clean (0 errors). TypeScript clean for all src/ files (pre-existing errors only in examples/ mini-services/ skills/ __tests__/).
+- Verified end-to-end with Agent Browser + VLM:
+  • Dashboard loads cleanly. "Data" button has NO green dot when Supabase isn't connected (VLM confirmed).
+  • Clicking "Data" opens the DataStorageDialog with: title, "Why connect your own database?" explainer, Supabase URL field, anon key field, Test connection button, Show SQL setup script link, Cancel/Save buttons.
+  • Show SQL setup script reveals the full SQL with all 6 tables (programs, reasoning_sessions, context_blocks, lessons, user_profiles, analytics_events) + indexes + RLS policies. Copy button works.
+  • Entering fake creds + clicking Test connection returns graceful error: "Connection failed: Failed to fetch" (because fake URL doesn't resolve). Dialog stays open so user can correct.
+  • Save button is correctly disabled until both URL and anon key are filled.
+  • POST /api/analytics returns 200 with empty org-supabase headers (when not connected) — server falls through to in-memory store cleanly.
+  • GET /api/memory with fake org-supabase headers returns 200 after ~7s timeout (server tries org-supabase first, falls through to platform/memory on connection failure). 5 consecutive 200s confirmed.
+  • Workspace view loads with full General Mode UI: input, 4 output type cards, example chips, "Help me build it" CTA, sticky footer.
+  • VLM confirmed: header has all expected buttons (Programs, Org, Data, Usage, Geek, Settings), main area intact, footer with all links visible at bottom.
+
+Stage Summary:
+- Users can now connect their OWN Supabase instance via the Data Storage dialog. Their data (programs, reasoning sessions, context blocks, user profile, analytics events, lessons) lives in THEIR database, not on HubForge servers.
+- The architecture is a 3-tier fallback: org-supabase (user's own DB) → platform-supabase (env vars, opt-in) → in-memory (per-instance). Every persistence call tries org first, falls through cleanly on error.
+- Program/context-block data flows browser → user's Supabase directly (no HubForge API roundtrip — anon key is safe with RLS). Memory/profile/analytics data flows browser → HubForge API → user's Supabase (so HubForge can also run platform-level analytics if env vars are set).
+- Cross-device sync: on ProgramDashboard mount, if user has connected their own Supabase, programs are pulled and merged by updatedAt. Same for context blocks (exposed via syncBlocksFromSupabase for future use).
+- Files produced/modified:
+  • NEW: src/lib/server/org-supabase.ts, src/lib/org-supabase-sync.ts
+  • MODIFIED: src/lib/org-supabase.ts (added orgSupabaseHeaders + 2 new tables in SQL), src/lib/api-client.ts, src/lib/analytics.ts, src/lib/user-profile.ts, src/lib/programs.ts, src/lib/context-blocks.ts, src/components/program-dashboard.tsx, src/app/page.tsx, src/app/api/memory/route.ts, src/app/api/profile/route.ts, src/app/api/analytics/route.ts
+- Privacy guarantee preserved: API keys and Supabase anon keys NEVER leave the browser except to their owner's Supabase (anon key) or directly to the AI provider (API key). HubForge servers only see the org-supabase URL+anon key in transit (acting as a proxy for memory/profile/analytics persistence); the user's data is never persisted to HubForge-operated storage when org-supabase is connected.

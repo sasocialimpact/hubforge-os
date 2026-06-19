@@ -1,5 +1,6 @@
 // Analytics client - non-blocking event tracking
 import { getProfileId } from './user-profile'
+import { orgSupabaseHeaders } from './org-supabase'
 
 let sessionId: string | null = null
 export function setAnalyticsSession(id: string | null) { sessionId = id }
@@ -8,7 +9,19 @@ const queue: any[] = []
 let flushTimer: any = null
 
 function scheduleFlush() { if (flushTimer) return; flushTimer = setTimeout(flush, 2000) }
-async function flush() { flushTimer = null; if (queue.length === 0) return; const batch = queue.splice(0, queue.length); try { await fetch('/api/analytics', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(batch[0]) }); if (queue.length > 0) scheduleFlush() } catch {} }
+async function flush() {
+  flushTimer = null
+  if (queue.length === 0) return
+  const batch = queue.splice(0, queue.length)
+  try {
+    await fetch('/api/analytics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...orgSupabaseHeaders() },
+      body: JSON.stringify(batch[0]),
+    })
+    if (queue.length > 0) scheduleFlush()
+  } catch {}
+}
 
 export function track(eventType: string, options: { category?: string; data?: Record<string, any>; durationMs?: number } = {}) {
   try { queue.push({ eventType, eventCategory: options.category || 'engagement', eventData: options.data || {}, durationMs: options.durationMs, profileId: getProfileId(), sessionId, page: typeof window !== 'undefined' ? window.location.pathname : '/' }); scheduleFlush() } catch {}

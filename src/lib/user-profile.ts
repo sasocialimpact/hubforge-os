@@ -1,4 +1,6 @@
 // User profile - stored in localStorage, synced to Supabase
+import { orgSupabaseHeaders } from './org-supabase'
+
 export interface UserProfile { profileId: string; name: string; email: string; organization: string; country: string; role: string }
 const PROFILE_KEY = 'hubforge.profile'
 const PROFILE_ID_KEY = 'hubforge.profileId'
@@ -21,7 +23,13 @@ export function storeProfile(profile: UserProfile): void {
   try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)) } catch {}
 }
 export async function syncProfile(profile: UserProfile): Promise<void> {
-  try { await fetch('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile) }) } catch (e) { console.warn('[profile] sync failed:', e) }
+  try {
+    await fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...orgSupabaseHeaders() },
+      body: JSON.stringify(profile),
+    })
+  } catch (e) { console.warn('[profile] sync failed:', e) }
 }
 
 export const COUNTRIES = ['Afghanistan','Argentina','Australia','Bangladesh','Belgium','Brazil','Burkina Faso','Cambodia','Cameroon','Canada','Chad','Chile','China','Colombia','Democratic Republic of Congo','Denmark','Ecuador','Egypt','Ethiopia','Finland','France','Germany','Ghana','Greece','India','Indonesia','Iraq','Ireland','Israel','Italy','Japan','Jordan','Kenya','Lebanon','Liberia','Madagascar','Malawi','Malaysia','Mali','Mexico','Morocco','Mozambique','Myanmar','Nepal','Netherlands','New Zealand','Nigeria','Norway','Pakistan','Peru','Philippines','Poland','Portugal','Rwanda','Saudi Arabia','Senegal','Sierra Leone','Singapore','Somalia','South Africa','South Sudan','Spain','Sri Lanka','Sudan','Sweden','Switzerland','Syria','Tanzania','Thailand','Tunisia','Turkey','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Vietnam','Yemen','Zambia','Zimbabwe','Other']

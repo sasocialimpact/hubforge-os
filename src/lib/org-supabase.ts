@@ -41,6 +41,27 @@ export function hasOrgSupabase(): boolean {
   return getOrgSupabase() !== null
 }
 
+// Header names MUST stay in sync with src/lib/server/org-supabase.ts
+export const ORG_SUPABASE_URL_HEADER = 'X-Org-Supabase-Url'
+export const ORG_SUPABASE_KEY_HEADER = 'X-Org-Supabase-Key'
+
+/**
+ * Build fetch headers for org-supabase auth, to attach to any API call that
+ * persists data (memory, profile, analytics, programs, context-blocks).
+ *
+ * Returns a fresh object each call so callers can spread/merge it safely.
+ * Returns an empty object if the user hasn't connected their own Supabase,
+ * in which case the server falls back to platform Supabase or in-memory store.
+ */
+export function orgSupabaseHeaders(): Record<string, string> {
+  const cfg = getOrgSupabase()
+  if (!cfg) return {}
+  return {
+    [ORG_SUPABASE_URL_HEADER]: cfg.url,
+    [ORG_SUPABASE_KEY_HEADER]: cfg.anonKey,
+  }
+}
+
 // The SQL the user runs in their own Supabase to create tables
 export const ORG_SUPABASE_SQL = `-- HubForge OS - Organization Database Setup
 -- Run this in YOUR Supabase SQL editor (Dashboard -> SQL -> New Query)
@@ -101,20 +122,55 @@ CREATE TABLE IF NOT EXISTS lessons (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- User profile (this device's profile - name, org, country, role)
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  profile_id TEXT UNIQUE NOT NULL,
+  name TEXT,
+  email TEXT,
+  organization TEXT,
+  country TEXT,
+  role TEXT,
+  last_seen TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  usage_count INTEGER DEFAULT 0
+);
+
+-- Analytics events (engagement, reasoning, errors - your own private analytics)
+CREATE TABLE IF NOT EXISTS analytics_events (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  profile_id TEXT,
+  session_id TEXT,
+  event_type TEXT NOT NULL,
+  event_category TEXT DEFAULT 'engagement',
+  event_data JSONB DEFAULT '{}',
+  page TEXT,
+  duration_ms INTEGER,
+  user_agent TEXT,
+  referrer TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_programs_status ON programs (status);
 CREATE INDEX IF NOT EXISTS idx_programs_updated ON programs (updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sessions_created ON reasoning_sessions (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_blocks_type ON context_blocks (block_type);
+CREATE INDEX IF NOT EXISTS idx_analytics_type ON analytics_events (event_type);
+CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics_events (created_at DESC);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reasoning_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE context_blocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lessons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
 
 -- Allow anon key to read/write (you can restrict further if needed)
 CREATE POLICY "Allow all for anon" ON programs FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON reasoning_sessions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon" ON context_blocks FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON lessons FOR ALL USING (true) WITH CHECK (true);`
+CREATE POLICY "Allow all for anon" ON lessons FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for anon" ON user_profiles FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for anon" ON analytics_events FOR ALL USING (true) WITH CHECK (true);`

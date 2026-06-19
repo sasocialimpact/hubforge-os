@@ -1,5 +1,15 @@
 // Program Workspaces - save, resume, and manage multiple programs.
 // Stored in localStorage (with Supabase sync if configured).
+// When the user connects their own Supabase (Data Storage dialog), every
+// save/delete also upserts/deletes in THEIR database. On app load, we pull
+// from their Supabase so they see their data across devices/browsers.
+
+import {
+  syncProgramToSupabase,
+  deleteProgramFromSupabase,
+  pullProgramsFromSupabase,
+  mergePrograms,
+} from './org-supabase-sync'
 
 export interface Program {
   id: string
@@ -46,6 +56,8 @@ export function saveProgram(program: Program): void {
       programs.unshift(updated)
     }
     localStorage.setItem(PROGRAMS_KEY, JSON.stringify(programs))
+    // Fire-and-forget sync to user's own Supabase (no-op if not connected).
+    void syncProgramToSupabase(updated)
   } catch {}
 }
 
@@ -53,6 +65,33 @@ export function deleteProgram(id: string): void {
   if (typeof window === 'undefined') return
   try {
     const programs = getPrograms().filter((p) => p.id !== id)
+    localStorage.setItem(PROGRAMS_KEY, JSON.stringify(programs))
+    // Fire-and-forget delete from user's own Supabase.
+    void deleteProgramFromSupabase(id)
+  } catch {}
+}
+
+/**
+ * Pull programs from the user's own Supabase (if connected) and merge with
+ * local. Call on app/dashboard mount. Returns the merged list (caller should
+ * also persist it via saveAllPrograms if they want localStorage updated).
+ */
+export async function syncProgramsFromSupabase(): Promise<Program[]> {
+  if (typeof window === 'undefined') return []
+  const remote = await pullProgramsFromSupabase()
+  if (remote.length === 0) return getPrograms()
+  const local = getPrograms()
+  const merged = mergePrograms(local, remote)
+  try {
+    localStorage.setItem(PROGRAMS_KEY, JSON.stringify(merged))
+  } catch {}
+  return merged
+}
+
+/** Overwrite all local programs (used after merge). Exposed for the dashboard. */
+export function saveAllPrograms(programs: Program[]): void {
+  if (typeof window === 'undefined') return
+  try {
     localStorage.setItem(PROGRAMS_KEY, JSON.stringify(programs))
   } catch {}
 }

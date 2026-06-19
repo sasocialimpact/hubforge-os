@@ -1,16 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, FileText, Clock, Trash2, Copy, Search, Sparkles, Building2, BookOpen, Utensils, Droplet, Sprout, Heart } from 'lucide-react'
+import { Plus, FileText, Clock, Trash2, Copy, Search, Sparkles, Building2, BookOpen, Utensils, Droplet, Sprout, Heart, Database, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { PROGRAM_TEMPLATES } from '@/lib/program-templates'
-import { getPrograms, deleteProgram, duplicateProgram, PROGRAM_STATUSES, type Program } from '@/lib/programs'
+import { getPrograms, deleteProgram, duplicateProgram, syncProgramsFromSupabase, PROGRAM_STATUSES, type Program } from '@/lib/programs'
 import { getOrgProfile } from '@/lib/organization'
+import { hasOrgSupabase } from '@/lib/org-supabase'
 import { cn } from '@/lib/utils'
 
 interface ProgramDashboardProps {
@@ -25,6 +26,25 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram }: ProgramDashboa
   // Load programs and org on mount (lazy init)
   const [programs, setPrograms] = useState<Program[]>(() => typeof window !== 'undefined' ? getPrograms() : [])
   const [org] = useState(() => typeof window !== 'undefined' ? getOrgProfile() : null)
+  // If the user has connected their own Supabase, show "syncing" until the
+  // initial pull completes. Lazy init means we don't trigger a cascading render.
+  const [syncingFromSupabase, setSyncingFromSupabase] = useState(() => hasOrgSupabase())
+
+  // On mount, if the user has connected their own Supabase, pull programs from
+  // it and merge with local. This gives them their data across devices.
+  useEffect(() => {
+    if (!hasOrgSupabase()) return
+    let cancelled = false
+    syncProgramsFromSupabase()
+      .then((merged) => {
+        if (!cancelled) setPrograms(merged)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setSyncingFromSupabase(false)
+      })
+    return () => { cancelled = true }
+  }, [])
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -59,9 +79,20 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram }: ProgramDashboa
           <h1 className="text-xl font-bold">My Programs</h1>
           {org && <p className="text-xs text-muted-foreground mt-0.5">{org.name} - {org.operatingCountries.join(', ') || org.registrationCountry}</p>}
         </div>
-        <Button onClick={onNewProgram} className="gap-2 bg-amber-600 hover:bg-amber-700 text-white">
-          <Plus className="h-4 w-4" /> New Program
-        </Button>
+        <div className="flex items-center gap-2">
+          {hasOrgSupabase() && (
+            <Badge variant="outline" className="gap-1 text-[10px] font-mono border-emerald-500/40 text-emerald-700 dark:text-emerald-300">
+              {syncingFromSupabase ? (
+                <><Database className="h-3 w-3 animate-pulse" /> Syncing…</>
+              ) : (
+                <><CheckCircle2 className="h-3 w-3" /> Synced to your Supabase</>
+              )}
+            </Badge>
+          )}
+          <Button onClick={onNewProgram} className="gap-2 bg-amber-600 hover:bg-amber-700 text-white">
+            <Plus className="h-4 w-4" /> New Program
+          </Button>
+        </div>
       </div>
 
       {/* Templates */}
