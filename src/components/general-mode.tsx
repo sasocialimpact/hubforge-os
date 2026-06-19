@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles, ArrowRight, ArrowLeft, Loader2, FileText, Workflow, Table2, ClipboardCheck,
-  Settings, RefreshCw, Check, MessageSquare, Send, Lightbulb, Wand2, Download, Copy, CheckCircle2,
+  Settings, RefreshCw, Check, MessageSquare, Send, Lightbulb, Wand2, Download, Copy, CheckCircle2, AlertCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -215,8 +215,15 @@ export function GeneralMode({ connected, providerConfig }: { connected: boolean;
     } catch (e: any) {
       console.error('Loop error:', e)
       analytics.runError({ error: e?.message ?? 'unknown', phase: progressPhase || 'unknown' })
+      // Show error message on the building screen instead of silently going back to input
       setProgressMsg(`Error: ${e?.message ?? 'Something went wrong'}`)
-      setPhase('input')
+      setProgressPhase('error')
+      // Keep on building screen with error visible for 5 seconds, then go back to input
+      setTimeout(() => {
+        setPhase('input')
+        setProgressPhase('')
+        setProgressMsg('Starting...')
+      }, 5000)
     }
   }, [decomposition, progressPhase])
 
@@ -417,6 +424,17 @@ export function GeneralMode({ connected, providerConfig }: { connected: boolean;
         {phase === 'building' && (
           <motion.div key="building" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-12">
             <div className="w-full max-w-md space-y-4">
+              {/* Error state */}
+              {progressPhase === 'error' ? (
+                <div className="text-center space-y-3">
+                  <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-950 flex items-center justify-center mx-auto">
+                    <AlertCircle className="h-6 w-6 text-red-500" />
+                  </div>
+                  <p className="text-sm font-medium text-red-600">{progressMsg}</p>
+                  <p className="text-xs text-muted-foreground">Returning to input in a moment... Check your AI provider settings or try again.</p>
+                </div>
+              ) : (
+                <>
               {/* Progress header */}
               <div className="text-center">
                 <p className="text-sm font-medium">{progressMsg}</p>
@@ -455,6 +473,8 @@ export function GeneralMode({ connected, providerConfig }: { connected: boolean;
                   )
                 })}
               </div>
+                </>
+              )}
             </div>
           </motion.div>
         )}
