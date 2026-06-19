@@ -228,6 +228,18 @@ export interface SignupParams {
     termsAccepted: boolean
     privacyPolicyAccepted: boolean
   }
+  // Profile data (stored in user_profiles table, visible to admin for
+  // understanding who's using HubForge and how to improve it).
+  profile?: {
+    name?: string
+    country?: string
+    role?: string
+    organization?: string
+    orgType?: string
+    sectors?: string[]
+    operatingCountries?: string[]
+    teamSize?: string
+  }
 }
 
 export interface SignupResult {
@@ -237,7 +249,7 @@ export interface SignupResult {
 }
 
 export async function signup(params: SignupParams): Promise<SignupResult> {
-  const { email, password, consent } = params
+  const { email, password, consent, profile } = params
 
   // Validate
   if (!email || !email.includes('@')) return { success: false, error: 'Valid email is required' }
@@ -247,13 +259,66 @@ export async function signup(params: SignupParams): Promise<SignupResult> {
   if (!consent.termsAccepted) return { success: false, error: 'You must accept the Terms of Service' }
   if (!consent.privacyPolicyAccepted) return { success: false, error: 'You must accept the Privacy Policy' }
 
-  // Check if email already exists (local)
+  // ── Try server-side signup first (real auth via Supabase) ──
+  try {
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email, password,
+        name: profile?.name,
+        country: profile?.country,
+        role: profile?.role,
+        organization: profile?.organization,
+        orgType: profile?.orgType,
+        sectors: profile?.sectors,
+        operatingCountries: profile?.operatingCountries,
+        teamSize: profile?.teamSize,
+        consentVersion: CONSENT_VERSION,
+        analyticsOptIn: consent.analyticsOptIn,
+      }),
+    })
+    const data = await res.json()
+    if (res.ok && data.user) {
+      // Server-side signup succeeded - store the session + tokens
+      const session: Session = {
+        userId: data.user.userId,
+        email: data.user.email,
+        createdAt: new Date().toISOString(),
+        type: 'platform',
+      }
+      saveSession(session)
+      // Store tokens for API calls
+      if (data.accessToken) {
+        try {
+          localStorage.setItem('hubforge.accessToken', data.accessToken)
+          localStorage.setItem('hubforge.refreshToken', data.refreshToken)
+        } catch {}
+      }
+      // Store the profile locally for the UI to use
+      if (data.user) {
+        try {
+          localStorage.setItem('hubforge.userProfile', JSON.stringify({
+            ...data.user,
+            analyticsOptIn: consent.analyticsOptIn,
+          }))
+        } catch {}
+      }
+      return { success: true, session }
+    }
+    // If server returned 503 (Supabase not configured), fall through to
+    // localStorage. Otherwise return the error.
+    if (res.status !== 503) {
+      return { success: false, error: data.error || 'Signup failed' }
+    }
+  } catch (e) {
+    // Network error - fall through to localStorage
+  }
+
+  // ── localStorage fallback (device-only identity) ──
   if (findLocalAccount(email)) {
     return { success: false, error: 'An account with this email already exists. Try logging in.' }
   }
-
-  // TODO: When platform Supabase is configured, try server-side signup first.
-  // For now: localStorage fallback.
 
   const salt = generateSalt()
   const passwordHash = await hashPassword(password, salt)
@@ -305,6 +370,45 @@ export async function login(params: LoginParams): Promise<SignupResult> {
   if (!email || !password) return { success: false, error: 'Email and password are required' }
   if (email.length > 254 || password.length > 256) return { success: false, error: 'Invalid credentials' }
 
+  // ── Try server-side login first (real auth via Supabase) ──
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    const data = await res.json()
+    if (res.ok && data.user) {
+      const session: Session = {
+        userId: data.user.userId,
+        email: data.user.email,
+        createdAt: new Date().toISOString(),
+        type: 'platform',
+      }
+      saveSession(session)
+      if (data.accessToken) {
+        try {
+          localStorage.setItem('hubforge.accessToken', data.accessToken)
+          localStorage.setItem('hubforge.refreshToken', data.refreshToken)
+        } catch {}
+      }
+      if (data.user) {
+        try {
+          localStorage.setItem('hubforge.userProfile', JSON.stringify(data.user))
+        } catch {}
+      }
+      return { success: true, session }
+    }
+    // If server returned 503 (Supabase not configured), fall through to
+    // localStorage. Otherwise return the error.
+    if (res.status !== 503) {
+      return { success: false, error: data.error || 'Login failed' }
+    }
+  } catch (e) {
+    // Network error - fall through to localStorage
+  }
+
+  // ── localStorage fallback ──
   const account = findLocalAccount(email)
   if (!account) {
     return { success: false, error: 'No account found with this email. Try signing up.' }
@@ -349,6 +453,41 @@ export async function login(params: LoginParams): Promise<SignupResult> {
 
 export function logout(): void {
   saveSession(null)
+  // Clear tokens + cached profile
+  try {
+    localStorage.removeItem('hubforge.accessToken')
+    localStorage.removeItem('hubforge.refreshToken')
+    localStorage.removeItem('hubforge.userProfile')
+  } catch {}
+  // Best-effort server-side logout (fire and forget)
+  try {
+    const token = localStorage.getItem('hubforge.accessToken')
+    if (token) fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+  } catch {}
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Profile access (for UI display + admin)
+// ───────────────────────────────────────────────────────────────────────────
+
+export function getStoredProfile(): any | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem('hubforge.userProfile')
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+export function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return localStorage.getItem('hubforge.accessToken')
+  } catch { return null }
+}
+
+export function isPlatformAuth(): boolean {
+  const session = getSession()
+  return session?.type === 'platform'
 }
 
 // ───────────────────────────────────────────────────────────────────────────

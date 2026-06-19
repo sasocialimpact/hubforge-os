@@ -11,10 +11,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { COUNTRIES, ROLES } from '@/lib/user-profile'
 import {
   signup, login, logout, exportAccountData, deleteAccount,
-  getDisplayEmail, getInitials,
+  getDisplayEmail, getInitials, getStoredProfile,
   type SignupParams,
 } from '@/lib/auth'
 
@@ -40,11 +42,19 @@ export function AuthDialog({ open, onOpenChange, initialMode = 'signup', onAuthC
     privacyPolicyAccepted: false,
   })
   const [exportedData, setExportedData] = useState<any>(null)
+  // Profile fields collected at signup so the platform knows who's using it.
+  const [name, setName] = useState('')
+  const [country, setCountry] = useState('')
+  const [role, setRole] = useState('')
+  const [organization, setOrganization] = useState('')
 
   const handleSignup = async () => {
     setError('')
     setLoading(true)
-    const params: SignupParams = { email, password, consent }
+    const params: SignupParams = {
+      email, password, consent,
+      profile: { name, country, role, organization },
+    }
     const result = await signup(params)
     setLoading(false)
     if (result.success) {
@@ -94,6 +104,10 @@ export function AuthDialog({ open, onOpenChange, initialMode = 'signup', onAuthC
     setPassword('')
     setError('')
     setExportedData(null)
+    setName('')
+    setCountry('')
+    setRole('')
+    setOrganization('')
     setConsent({ analyticsOptIn: true, termsAccepted: false, privacyPolicyAccepted: false })
   }
 
@@ -141,6 +155,42 @@ export function AuthDialog({ open, onOpenChange, initialMode = 'signup', onAuthC
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                       {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </button>
+                  </div>
+                </div>
+
+                {/* Profile fields - collected at signup so the platform knows
+                    who's using it. Stored in user_profiles table. */}
+                <div className="pt-1 border-t border-border">
+                  <p className="text-[10px] font-mono uppercase text-muted-foreground mb-2 mt-2">About you (helps us improve)</p>
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Your name</Label>
+                      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Priya Sharma" className="text-sm h-9" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px]">Country</Label>
+                        <Select value={country} onValueChange={setCountry}>
+                          <SelectTrigger className="text-sm h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            {COUNTRIES.map((c) => <SelectItem key={c} value={c} className="text-sm">{c}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px]">Role</Label>
+                        <Select value={role} onValueChange={setRole}>
+                          <SelectTrigger className="text-sm h-9"><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>
+                            {ROLES.map((r) => <SelectItem key={r} value={r} className="text-sm">{r}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Organization</Label>
+                      <Input value={organization} onChange={(e) => setOrganization(e.target.value)} placeholder="Rural Education Action Program" className="text-sm h-9" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -331,21 +381,32 @@ export function AuthDialog({ open, onOpenChange, initialMode = 'signup', onAuthC
           {/* ── ACCOUNT MODE (logged in) ── */}
           {mode === 'account' && (
             <>
-              <div className="rounded-lg border border-border p-3 space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-sm">
-                    {getInitials()}
+              {(() => {
+                const profile = getStoredProfile()
+                return (
+                  <div className="rounded-lg border border-border p-3 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-sm">
+                        {getInitials()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{profile?.name || getDisplayEmail() || email || 'Account'}</div>
+                        <div className="text-[10px] text-muted-foreground truncate">{getDisplayEmail()}</div>
+                        <Badge variant="outline" className="text-[9px] mt-0.5">
+                          {profile ? 'Platform account' : 'Device identity'}
+                        </Badge>
+                      </div>
+                    </div>
+                    {profile && (profile.country || profile.role || profile.organization) && (
+                      <div className="grid grid-cols-1 gap-1 pt-2 border-t border-border text-[10px]">
+                        {profile.organization && <div><span className="text-muted-foreground">Org:</span> {profile.organization}</div>}
+                        {profile.role && <div><span className="text-muted-foreground">Role:</span> {profile.role}</div>}
+                        {profile.country && <div><span className="text-muted-foreground">Country:</span> {profile.country}</div>}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    {/* Use the live session email (not the local form state,
-                        which is empty when this dialog opens from the header
-                        avatar click). Falls back to the form email if the
-                        user is mid-typing in signup/login mode. */}
-                    <div className="text-sm font-medium truncate">{getDisplayEmail() || email || 'Account'}</div>
-                    <Badge variant="outline" className="text-[9px] mt-0.5">Device identity</Badge>
-                  </div>
-                </div>
-              </div>
+                )
+              })()}
 
               <div className="space-y-2">
                 <Button onClick={handleExport} variant="outline" className="w-full gap-1.5 justify-start">
