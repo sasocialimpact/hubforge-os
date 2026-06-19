@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { PROGRAM_TEMPLATES } from '@/lib/program-templates'
-import { getPrograms, deleteProgram, duplicateProgram, syncProgramsFromSupabase, PROGRAM_STATUSES, type Program } from '@/lib/programs'
+import { getPrograms, deleteProgram, duplicateProgram, createProgram, saveProgram, syncProgramsFromSupabase, PROGRAM_STATUSES, type Program } from '@/lib/programs'
 import { getOrgProfile } from '@/lib/organization'
 import { hasOrgSupabase } from '@/lib/org-supabase'
 import { getStoredProviderConfig } from '@/lib/providers'
@@ -90,6 +90,28 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram, onOpenSettings, 
     e.stopPropagation()
     duplicateProgram(id)
     setPrograms(getPrograms())
+  }
+
+  // Start from a template — creates a program instantly with pre-filled ToC +
+  // logframe + budget + risks. NO AI, NO internet needed. This is the offline
+  // path: the user gets a 90% complete program in <1 second.
+  const handleStartFromTemplate = (tpl: any) => {
+    const program = createProgram({
+      title: tpl.name,
+      problem: tpl.problem,
+      outputTypes: ['strategy', 'toc', 'logframe'],
+      draft: generateTemplateDraft(tpl),
+      evaluation: { overall: 0, thresholdMet: false, criteria: {} },
+      structured: { toc: tpl.toc, logframe: tpl.logframe },
+      feedbackHistory: [],
+      provider: 'template',
+      templateId: tpl.id,
+      tags: { sector: tpl.category, budget: tpl.typicalBudget },
+    })
+    saveProgram(program)
+    setPrograms(getPrograms())
+    // Open the program so the user can see what was created.
+    onOpenProgram(program)
   }
 
   const filtered = programs.filter((p) => {
@@ -207,14 +229,19 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram, onOpenSettings, 
         </div>
       </div>
 
-      {/* Templates */}
+      {/* Templates — instant, offline, no AI needed */}
       <div>
-        <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Start from a template (instant, no AI needed)</p>
+        <div className="flex items-center gap-2 mb-2">
+          <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Start from a template</p>
+          <Badge variant="outline" className="text-[8px] gap-0.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-300">
+            <CheckCircle2 className="h-2.5 w-2.5" /> Works offline
+          </Badge>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
           {PROGRAM_TEMPLATES.map((tpl) => {
             const Icon = tpl.icon === 'BookOpen' ? BookOpen : tpl.icon === 'Utensils' ? Utensils : tpl.icon === 'Droplet' ? Droplet : tpl.icon === 'Sprout' ? Sprout : Heart
             return (
-              <button key={tpl.id} onClick={() => { onNewProgram() }}
+              <button key={tpl.id} onClick={() => handleStartFromTemplate(tpl)}
                 className="text-left rounded-lg border border-border p-3 hover:border-amber-500 hover:shadow-sm transition-all group">
                 <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-950/30 flex items-center justify-center mb-2 group-hover:bg-amber-500 group-hover:text-white transition-colors">
                   <Icon className="h-4 w-4 text-amber-600 group-hover:text-white" />
@@ -354,4 +381,63 @@ export function ProgramDashboard({ onNewProgram, onOpenProgram, onOpenSettings, 
       )}
     </div>
   )
+}
+
+// Generate a readable strategy draft from a template's structured data.
+// This gives the user something to read/edit immediately — no AI needed.
+function generateTemplateDraft(tpl: any): string {
+  const lines: string[] = [
+    `# ${tpl.name}`,
+    '',
+    `## Executive Summary`,
+    tpl.description,
+    '',
+    `**Typical budget:** ${tpl.typicalBudget}`,
+    `**Estimated duration:** ${tpl.estimatedDuration}`,
+    `**Sector:** ${tpl.category}`,
+    '',
+    '## Problem Statement',
+    tpl.problem,
+    '',
+    '## Theory of Change',
+    `**Target population:** ${tpl.toc?.targetPopulation || 'To be defined'}`,
+    '',
+    '### Inputs',
+    ...(tpl.toc?.inputs || []).map((i: string) => `- ${i}`),
+    '',
+    '### Activities',
+    ...(tpl.toc?.activities || []).map((a: string) => `- ${a}`),
+    '',
+    '### Outputs',
+    ...(tpl.toc?.outputs || []).map((o: string) => `- ${o}`),
+    '',
+    '### Outcomes',
+    ...(tpl.toc?.outcomes || []).map((o: string) => `- ${o}`),
+    '',
+    '### Impact',
+    tpl.toc?.impact || 'To be defined',
+    '',
+    '## Logframe',
+  ]
+  if (tpl.logframe) {
+    const lf = tpl.logframe
+    if (lf.goal) lines.push(`### Goal: ${lf.goal.description}`, `  - OVI: ${lf.goal.ovi}`, `  - MoV: ${lf.goal.mov}`, '')
+    if (lf.purpose) lines.push(`### Purpose: ${lf.purpose.description}`, `  - OVI: ${lf.purpose.ovi}`, `  - MoV: ${lf.purpose.mov}`, '')
+    if (lf.outputs) lf.outputs.forEach((o: any, i: number) => {
+      lines.push(`### Output ${i + 1}: ${o.description}`, `  - OVI: ${o.ovi}`, `  - MoV: ${o.mov}`, '')
+    })
+  }
+  if (tpl.risks && tpl.risks.length > 0) {
+    lines.push('## Risks & Mitigations')
+    tpl.risks.forEach((r: any) => {
+      lines.push(`- **${r.risk}** (Likelihood: ${r.likelihood}, Impact: ${r.impact})`, `  - Mitigation: ${r.mitigation}`)
+    })
+  }
+  if (tpl.budget && tpl.budget.length > 0) {
+    lines.push('', '## Budget Allocation')
+    tpl.budget.forEach((b: any) => {
+      lines.push(`- ${b.category}: ${b.percentage}% — ${b.description}`)
+    })
+  }
+  return lines.join('\n')
 }

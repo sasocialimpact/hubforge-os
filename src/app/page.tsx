@@ -29,9 +29,15 @@ export default function Home() {
   // 'landing' = marketing landing page (default for first visit)
   // 'dashboard' = saved programs grid
   // 'workspace' = general/geek mode builder
+  // AUTH GATE: if not logged in, ALWAYS show landing. The app (dashboard +
+  // workspace) is only accessible after signup/login. This is the standard
+  // SaaS pattern — you don't get to use the product without an account.
   const [view, setView] = useState<'landing' | 'dashboard' | 'workspace'>(() => {
     if (typeof window === 'undefined') return 'landing'
-    // Returning users skip the landing page. First-time visitors see it.
+    // Not logged in → landing page, always.
+    if (!isLoggedIn()) return 'landing'
+    // Logged in + returning → dashboard. Logged in + first time → landing
+    // (so they see the product they signed up for, then launch).
     return localStorage.getItem('hubforge.landingSeen') ? 'dashboard' : 'landing'
   })
   // CommandCenter replaces both SettingsDialog and CommandPalette.
@@ -80,10 +86,29 @@ export default function Home() {
     analytics.settingsOpened()
   }
 
-  // Launch from the landing page → mark as seen, go to dashboard.
+  // Launch from the landing page → if not logged in, open signup first.
+  // Once logged in, mark landing as seen and go to dashboard.
   const handleLaunch = () => {
+    if (!isLoggedIn()) {
+      setAuthMode('signup')
+      setAuthOpen(true)
+      return
+    }
     try { localStorage.setItem('hubforge.landingSeen', '1') } catch {}
     setView('dashboard')
+  }
+
+  // When auth state changes (login/logout), re-evaluate the view.
+  // - On login: if we were on landing, go to dashboard.
+  // - On logout: force back to landing (auth gate).
+  const handleAuthChange = () => {
+    setAuthRev((n) => n + 1)
+    if (isLoggedIn()) {
+      try { localStorage.setItem('hubforge.landingSeen', '1') } catch {}
+      setView('dashboard')
+    } else {
+      setView('landing')
+    }
   }
 
   const handleProviderSaved = (newConfig: ProviderConfig) => {
@@ -231,16 +256,17 @@ export default function Home() {
       {shouldOnboard && !onboardingDone && (
         <FirstRunOnboarding onComplete={handleOnboardingComplete} />
       )}
-      {/* Auth dialog — signup/login/account. onAuthChange bumps authRev to force header re-render. */}
+        </>
+      )}
+      {/* Auth dialog — ALWAYS mounted, even on landing page, so "Launch App"
+          can open signup before the user enters the app. */}
       <AuthDialog
         key={`${authMode}-${authOpen}`}
         open={authOpen}
         onOpenChange={setAuthOpen}
         initialMode={authMode}
-        onAuthChange={() => setAuthRev((n) => n + 1)}
+        onAuthChange={handleAuthChange}
       />
-        </>
-      )}
     </div>
   )
 }
