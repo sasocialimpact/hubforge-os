@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { BrainCircuit, Sparkles, Layers, Settings, Terminal, Wand2, Building2, LayoutGrid } from 'lucide-react'
+import { BrainCircuit, Sparkles, Layers, Settings, Building2, LayoutGrid } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -21,7 +21,7 @@ type Mode = 'general' | 'geek'
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>('general')
-  const [view, setView] = useState<'dashboard' | 'workspace'>('workspace')
+  const [view, setView] = useState<'dashboard' | 'workspace'>('dashboard')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [orgOpen, setOrgOpen] = useState(false)
   const [providerConfig, setProviderConfig] = useState<ProviderConfig>(() => getStoredProviderConfig())
@@ -74,19 +74,6 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="ml-4 hidden sm:flex items-center rounded-lg border border-border bg-muted/50 p-0.5">
-            <button type="button" onClick={() => handleModeSwitch('general')}
-              className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                mode === 'general' ? 'bg-background shadow-sm text-amber-700 dark:text-amber-400' : 'text-muted-foreground hover:text-foreground')}>
-              <Wand2 className="h-3.5 w-3.5" /> General
-            </button>
-            <button type="button" onClick={() => handleModeSwitch('geek')}
-              className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                mode === 'geek' ? 'bg-background shadow-sm text-amber-700 dark:text-amber-400' : 'text-muted-foreground hover:text-foreground')}>
-              <Terminal className="h-3.5 w-3.5" /> Geek
-            </button>
-          </div>
-
           <div className="ml-auto flex items-center gap-2">
             <Button variant="ghost" size="sm" className="gap-1.5 text-xs px-2" onClick={() => setView(view === 'dashboard' ? 'workspace' : 'dashboard')}>
               <LayoutGrid className="h-3.5 w-3.5" />
@@ -118,14 +105,6 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="sm:hidden border-t border-border px-4 py-2 flex items-center gap-1">
-          <button type="button" onClick={() => handleModeSwitch('general')} className={cn('flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium', mode === 'general' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'text-muted-foreground')}>
-            <Wand2 className="h-3.5 w-3.5" /> General
-          </button>
-          <button type="button" onClick={() => handleModeSwitch('geek')} className={cn('flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium', mode === 'geek' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : 'text-muted-foreground')}>
-            <Terminal className="h-3.5 w-3.5" /> Geek
-          </button>
-        </div>
       </header>
 
       <main className="flex-1">

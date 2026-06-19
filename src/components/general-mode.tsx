@@ -31,6 +31,35 @@ import { cn } from '@/lib/utils'
 
 type Phase = 'input' | 'interview' | 'building' | 'deliverable'
 
+// Progress steps for the live checklist
+const PROGRESS_STEPS = [
+  { phase: 'supervisor', label: 'Understanding your project' },
+  { phase: 'retrieval', label: 'Gathering frameworks and evidence' },
+  { phase: 'search', label: 'Researching demographics and previous programs' },
+  { phase: 'rule', label: 'Checking the basics' },
+  { phase: 'reasoning', label: 'Drafting your strategy' },
+  { phase: 'critique', label: 'Reviewing the logic' },
+  { phase: 'improvement', label: 'Refining the draft' },
+  { phase: 'evaluation', label: 'Scoring quality' },
+  { phase: 'structure', label: 'Building diagrams' },
+]
+
+const PHASE_ORDER = ['supervisor', 'retrieval', 'search', 'rule', 'reasoning', 'critique', 'improvement', 'evaluation', 'structure']
+
+function getProgressPercent(currentPhase: string): number {
+  const idx = PHASE_ORDER.indexOf(currentPhase)
+  if (idx === -1) return 0
+  return Math.round(((idx + 1) / PHASE_ORDER.length) * 100)
+}
+
+function getStepStatus(stepPhase: string, currentPhase: string): 'done' | 'running' | 'pending' {
+  const stepIdx = PHASE_ORDER.indexOf(stepPhase)
+  const currentIdx = PHASE_ORDER.indexOf(currentPhase)
+  if (stepIdx < currentIdx) return 'done'
+  if (stepIdx === currentIdx) return 'running'
+  return 'pending'
+}
+
 interface Deliverable {
   draft: string
   evaluation: EvaluationResult | null
@@ -361,18 +390,45 @@ export function GeneralMode({ connected, providerConfig }: { connected: boolean;
         )}
 
         {phase === 'building' && (
-          <motion.div key="building" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-20">
-            <div className="flex flex-col items-center gap-5">
-              <div className="relative h-20 w-20">
-                <motion.div animate={{ rotate: 360 }} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                  className="absolute inset-0 rounded-full border-4 border-amber-200 border-t-amber-600" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Sparkles className="h-7 w-7 text-amber-600" />
-                </div>
-              </div>
+          <motion.div key="building" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-12">
+            <div className="w-full max-w-md space-y-4">
+              {/* Progress header */}
               <div className="text-center">
                 <p className="text-sm font-medium">{progressMsg}</p>
-                <p className="text-[10px] text-muted-foreground font-mono mt-1">{progressPhase || 'starting'}</p>
+              </div>
+
+              {/* Progress bar */}
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-amber-500 to-orange-600 rounded-full"
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${getProgressPercent(progressPhase)}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+
+              {/* Live checklist */}
+              <div className="space-y-1.5">
+                {PROGRESS_STEPS.map((step) => {
+                  const status = getStepStatus(step.phase, progressPhase)
+                  return (
+                    <div key={step.phase} className="flex items-center gap-2 text-xs">
+                      {status === 'done' && <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+                      {status === 'running' && <Loader2 className="h-3.5 w-3.5 text-amber-500 animate-spin shrink-0" />}
+                      {status === 'pending' && <div className="h-3.5 w-3.5 rounded-full border-2 border-muted shrink-0" />}
+                      <span className={cn(
+                        status === 'done' && 'text-muted-foreground line-through',
+                        status === 'running' && 'text-amber-700 dark:text-amber-400 font-medium',
+                        status === 'pending' && 'text-muted-foreground/50',
+                      )}>
+                        {step.label}
+                      </span>
+                      {status === 'running' && progressPhase === 'search' && (
+                        <span className="text-[10px] text-muted-foreground ml-auto animate-pulse">searching web...</span>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </motion.div>
@@ -454,7 +510,7 @@ function DeliverableView({
 
   return (
     <div className="space-y-4">
-      {/* Status + actions */}
+      {/* Status + actions - export is the hero */}
       <Card className={cn('p-4', ready ? 'border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20' : 'border-amber-500/40 bg-amber-50/50 dark:bg-amber-950/20')}>
         <div className="flex items-center gap-3 flex-wrap">
           <div className={cn('h-10 w-10 rounded-full flex items-center justify-center shrink-0', ready ? 'bg-emerald-500' : 'bg-amber-500')}>
@@ -462,33 +518,41 @@ function DeliverableView({
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-bold">{ready ? 'Ready to share' : 'Good draft - a few tweaks could help'}</h3>
-            <p className="text-xs text-muted-foreground">Quality score {score}/100 {ready ? '· meets our quality threshold' : '· below 80 but still usable'}</p>
+            <p className="text-xs text-muted-foreground">Quality score {score}/100</p>
           </div>
-          {/* Export dropdown */}
-          <div className="relative">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setExportOpen(s => !s)}>
-              <Download className="h-3.5 w-3.5" /> Export ▾
-            </Button>
-            {exportOpen && (
-              <div className="absolute right-0 top-full mt-1 z-20 bg-background border border-border rounded-lg shadow-lg py-1 w-44">
-                <button onClick={() => { handleWord(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📄 Word (.docx)</button>
-                <button onClick={() => { handlePDF(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📄 PDF (full report)</button>
-                {hasLogframe && <button onClick={() => { handleExcelLogframe(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📊 Excel - Logframe</button>}
-                {hasToc && <button onClick={() => { handleExcelToC(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📊 Excel - Theory of Change</button>}
-                <button onClick={() => { handleCopy(); setExportOpen(false) }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted">📋 Copy text</button>
-              </div>
-            )}
-          </div>
-          {tabs.length > 1 && (
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setIsEditing(e => !e)}>
-              {isEditing ? <><Check className="h-3.5 w-3.5" /> Done editing</> : <><RefreshCw className="h-3.5 w-3.5" /> Edit</>}
+        </div>
+        {/* Hero export buttons - big, prominent, impossible to miss */}
+        <div className="flex flex-wrap gap-2 mt-3">
+          <Button onClick={handleWord} className="gap-2 bg-amber-600 hover:bg-amber-700 text-white h-9">
+            <Download className="h-4 w-4" /> Word
+          </Button>
+          <Button onClick={handlePDF} variant="outline" className="gap-2 h-9">
+            <Download className="h-4 w-4" /> PDF
+          </Button>
+          {hasLogframe && (
+            <Button onClick={handleExcelLogframe} variant="outline" className="gap-2 h-9">
+              <Download className="h-4 w-4" /> Excel
             </Button>
           )}
-          <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={onReset}>
-            New
+          <Button onClick={handleCopy} variant="ghost" className="gap-2 h-9">
+            {copied ? <><Check className="h-4 w-4 text-emerald-600" /> Copied</> : <><Copy className="h-4 w-4" /> Copy</>}
           </Button>
         </div>
       </Card>
+
+      {/* Edit toggle + New button (secondary) */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-1.5">
+          {tabs.length > 1 && (
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setIsEditing(e => !e)}>
+              {isEditing ? <><Check className="h-3.5 w-3.5" /> Done editing</> : <><RefreshCw className="h-3.5 w-3.5" /> Edit</>}
+            </Button>
+          )}
+        </div>
+        <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={onReset}>
+          New
+        </Button>
+      </div>
 
       {tabs.length > 0 && (
         <Tabs defaultValue={tabs[0].id}>
