@@ -255,3 +255,39 @@ Stage Summary:
 - The org edit flow is confirmed working: summary view → Edit details → wizard with pre-filled data → Continue through all 3 steps → Save → back to summary.
 - Files modified: public/sw.js (rewritten with network-first strategy), src/app/layout.tsx (SW auto-reload on update), next.config.ts (no-cache headers for sw.js).
 - NOTE: Users who already have the old SW (v2) cached will get the new SW (v3) on their next page load. The auto-reload feature will then refresh the page with the latest code. Users can also hard-refresh (Ctrl+Shift+R) to force immediate update.
+
+---
+Task ID: 8
+Agent: main (Z.ai Code)
+Task: Replace the 3-step org wizard + separate summary view with ONE single-panel editor — user requested "just one panel to edit & save".
+
+Work Log:
+- Rewrote src/app/organization/page.tsx as a single-panel editor with 3 collapsible sections (Identity, Operations, Donors & past results) all on ONE page.
+- Design decisions:
+  • First-time visit: Identity section open by default, others collapsed (less overwhelming). Save button says "Save & start building".
+  • Editing existing profile: ALL sections open by default so the user sees everything at once and can edit any field inline.
+  • Section headers show a live summary (e.g., "My NGO • NGO (National) • India") so users see key info even when collapsed.
+  • Sticky header with org name + save status badge (Saved / Unsaved / Saved!).
+  • Sticky save bar at the bottom with Back and Save buttons (always visible while scrolling).
+  • Unsaved-changes confirmation when clicking Back ("You have unsaved changes. Leave without saving?").
+  • "Saved!" temporary confirmation badge appears for 2.5s after save, then reverts to the persistent "Saved" badge.
+- State management:
+  • Lazy-initialized profile state from localStorage (no useEffect cascading render — satisfies react-hooks/set-state-in-effect lint rule).
+  • `dirty` flag tracks unsaved changes; cleared on save.
+  • `saved` flag shows temporary "Saved!" badge for 2.5s.
+  • openSections state lazy-initialized: all-open if profile exists, identity-only if first-time.
+- Lint passes clean (0 errors). No setState-in-effect violations.
+- Verified end-to-end with Agent Browser + VLM:
+  • EDIT FLOW: Set profile via localStorage → page loads with all 3 sections expanded, all fields pre-filled, "Saved" badge in header. Edited name field → header badge changed to "Unsaved". Clicked Save → header showed "Saved!" (temporary) + "Saved" (persistent). After 2.5s, "Saved!" disappeared, "Saved" remained. localStorage updated with new name.
+  • FIRST-TIME FLOW: Cleared localStorage → page loads with heading "Tell us about your organization", Identity section open, others collapsed, Save button says "Save & start building" (disabled). Filled name → Save enabled. Clicked Save → "Saved!" confirmation, data persisted to localStorage.
+  • VLM confirmed: single panel (not multi-step wizard), 3 sections visible, sticky save bar at bottom, header with org name + Saved badge, all fields editable.
+- Removed the old 2-view system (summary view + wizard view) entirely. The single-panel editor replaces both.
+
+Stage Summary:
+- The org page is now ONE panel where users can see everything and edit/save inline. No more multi-step wizard, no more separate summary view.
+- Collapsible sections keep it compact (first-time: only Identity open; editing: all open).
+- Live status badges (Saved / Unsaved / Saved!) give immediate feedback.
+- Sticky save bar is always visible while scrolling.
+- Unsaved-changes confirmation prevents accidental data loss.
+- Files modified: src/app/organization/page.tsx (complete rewrite, ~400 lines).
+- Lint clean, browser-verified, VLM-confirmed.
