@@ -24,6 +24,8 @@ export interface Program {
   provider: string
   templateId?: string
   tags: { donor?: string; geography?: string; sector?: string; budget?: string }
+  orgId?: string
+  userId?: string
   createdAt: string
   updatedAt: string
 }
@@ -111,6 +113,8 @@ export function createProgram(data: Partial<Program>): Program {
     provider: data.provider || 'zai',
     templateId: data.templateId,
     tags: data.tags || {},
+    orgId: data.orgId,
+    userId: data.userId,
     createdAt: now,
     updatedAt: now,
   }

@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     const retrieval = retrievalEngine(problem, decomposition, pack)
 
     // 3. Rule checks
-    const ruleChecks = ruleEngine(problem, pack)
+    const ruleChecks = ruleEngine(problem, pack, decomposition)
 
     // 4-8. Iterative loop: Reasoning → Critique → Improvement → Evaluation
     let priorDraft: string | null = null
