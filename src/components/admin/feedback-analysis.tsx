@@ -84,7 +84,7 @@ export function FeedbackAnalysis({ adminKey, refreshKey }: Props) {
   const [expandedFeedback, setExpandedFeedback] = useState<string | null>(null)
   const [copiedPattern, setCopiedPattern] = useState<string | null>(null)
 
-  const fetch = useCallback(async (key: string) => {
+  const loadData = useCallback(async (key: string) => {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/feedback-analysis?admin_key=${encodeURIComponent(key)}`)
@@ -104,8 +104,8 @@ export function FeedbackAnalysis({ adminKey, refreshKey }: Props) {
 
   useEffect(() => {
     if (!adminKey) return
-    fetch(adminKey)
-  }, [adminKey, refreshKey, fetch])
+    loadData(adminKey)
+  }, [adminKey, refreshKey, loadData])
 
   const copySuggestion = (pattern: string, suggestion: string) => {
     try {

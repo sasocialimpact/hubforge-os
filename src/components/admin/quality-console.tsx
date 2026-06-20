@@ -163,7 +163,7 @@ export function QualityConsole({ adminKey, refreshKey }: { adminKey: string; ref
     return Array.from(set).sort()
   }, [stats])
 
-  const hasActiveFilters = filters.minScore > 0 || filters.maxScore < 100 || filters.provider !== 'all' || filters.from || filters.to
+  const hasActiveFilters = Boolean(filters.minScore > 0 || filters.maxScore < 100 || filters.provider !== 'all' || filters.from || filters.to)
   const clearFilters = () => setFilters(DEFAULT_FILTERS)
 
   return (
