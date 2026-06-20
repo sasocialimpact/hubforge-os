@@ -78,7 +78,7 @@ jobs:
         run: bun install
 
       - name: Run unit tests
-        run: bun test
+        run: bun test src/
 
   build:
     name: Build
