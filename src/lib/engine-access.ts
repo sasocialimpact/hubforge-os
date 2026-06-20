@@ -8,11 +8,28 @@ import {
   type ProviderConfig, type OutputType, type ReasoningPromptOverride,
 } from './engines'
 import { socialImpactPack } from './knowledge'
+import { healthcarePack } from './healthcare-pack'
+import type { DomainPack } from './knowledge'
+
+const PACKS: Record<string, DomainPack> = {
+  'social-impact': socialImpactPack,
+  'healthcare': healthcarePack,
+}
+
+export function getPack(id: string): DomainPack {
+  return PACKS[id] ?? socialImpactPack
+}
+
+export function listPacks() {
+  return Object.values(PACKS).map(p => ({
+    id: p.id, name: p.name, domain: p.domain, version: p.version, description: p.description,
+  }))
+}
 
 export {
   supervisorEngine, retrievalEngine, ruleEngine, reasoningEngine,
   critiqueEngine, improvementEngine, evaluationEngine, structureEngine,
   feedbackEngine, describeProvider, normalizeConfig,
-  socialImpactPack,
+  socialImpactPack, healthcarePack,
 }
 export type { ProviderConfig, OutputType, ReasoningPromptOverride }
