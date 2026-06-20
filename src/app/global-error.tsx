@@ -6,6 +6,7 @@
 // bypassed when this boundary activates.
 
 import { useEffect } from 'react'
+import { captureException, initSentry } from '@/lib/sentry'
 
 export default function GlobalError({
   error,
@@ -15,7 +16,7 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error('[global-error]', error)
+    initSentry().then(() => captureException(error))
   }, [error])
 
   return (
