@@ -9,11 +9,13 @@ import {
 } from './engines'
 import { socialImpactPack } from './knowledge'
 import { healthcarePack } from './healthcare-pack'
+import { educationPack } from './education-pack'
 import type { DomainPack } from './knowledge'
 
 const PACKS: Record<string, DomainPack> = {
   'social-impact': socialImpactPack,
   'healthcare': healthcarePack,
+  'education': educationPack,
 }
 
 export function getPack(id: string): DomainPack {
@@ -30,6 +32,6 @@ export {
   supervisorEngine, retrievalEngine, ruleEngine, reasoningEngine,
   critiqueEngine, improvementEngine, evaluationEngine, structureEngine,
   feedbackEngine, describeProvider, normalizeConfig,
-  socialImpactPack, healthcarePack,
+  socialImpactPack, healthcarePack, educationPack,
 }
 export type { ProviderConfig, OutputType, ReasoningPromptOverride }
