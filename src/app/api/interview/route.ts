@@ -1,6 +1,7 @@
 // POST /api/interview - Supervisor Engine: decompose problem, return questions
 import { NextRequest, NextResponse } from 'next/server'
-import { supervisorEngine, socialImpactPack, describeProvider, normalizeConfig, type ProviderConfig } from '@/lib/engine-access'
+import { supervisorEngine, describeProvider, normalizeConfig, type ProviderConfig } from '@/lib/engine-access'
+import { getMergedPack } from '@/lib/knowledge-overrides'
 
 export const maxDuration = 60
 
@@ -15,7 +16,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'problem too long (max 10000 chars)' }, { status: 400 })
     }
     const config = normalizeConfig(providerConfig)
-    const decomposition = await supervisorEngine(config, problem, socialImpactPack)
+    const pack = await getMergedPack()
+    const decomposition = await supervisorEngine(config, problem, pack)
     return NextResponse.json({
       decomposition: {
         problemStatement: decomposition.problemStatement,

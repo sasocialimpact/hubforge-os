@@ -29,9 +29,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   supervisorEngine, retrievalEngine, ruleEngine, reasoningEngine,
   critiqueEngine, improvementEngine, evaluationEngine, structureEngine,
-  socialImpactPack, normalizeConfig, describeProvider,
+  normalizeConfig, describeProvider,
   type ProviderConfig, type OutputType,
 } from '@/lib/engine-access'
+import { getMergedPack } from '@/lib/knowledge-overrides'
 import { checkRateLimit, recordStrategyGeneration } from '@/lib/server/rate-limit-server'
 
 export const maxDuration = 90
@@ -81,14 +82,17 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Run the 9-engine pipeline ──
+    // Load the merged knowledge pack (built-in + admin overrides) once.
+    const pack = await getMergedPack()
+
     // 1. Supervisor
-    const decomposition = await supervisorEngine(config, problem, socialImpactPack)
+    const decomposition = await supervisorEngine(config, problem, pack)
 
     // 2. Retrieval
-    const retrieval = retrievalEngine(problem, decomposition, socialImpactPack)
+    const retrieval = retrievalEngine(problem, decomposition, pack)
 
     // 3. Rule checks
-    const ruleChecks = ruleEngine(problem, socialImpactPack)
+    const ruleChecks = ruleEngine(problem, pack)
 
     // 4-8. Iterative loop: Reasoning → Critique → Improvement → Evaluation
     let priorDraft: string | null = null
@@ -102,11 +106,11 @@ export async function POST(req: NextRequest) {
       iterations = iter
       const draft = await reasoningEngine(
         config, problem, decomposition, retrieval, priorCritique, priorDraft,
-        socialImpactPack, iter, maxIter, outputs, {}, undefined, undefined, undefined
+        pack, iter, maxIter, outputs, {}, undefined, undefined, undefined
       )
-      const critique = await critiqueEngine(config, draft, socialImpactPack)
-      const improved = await improvementEngine(config, draft, critique, socialImpactPack)
-      const evaluation = await evaluationEngine(config, improved, socialImpactPack, threshold)
+      const critique = await critiqueEngine(config, draft, pack)
+      const improved = await improvementEngine(config, draft, critique, pack)
+      const evaluation = await evaluationEngine(config, improved, pack, threshold)
 
       finalDraft = improved
       finalScore = evaluation.overall

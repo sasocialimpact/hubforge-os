@@ -1,38 +1,42 @@
 // GET /api/v1/knowledge - List the knowledge graph layers (frameworks, rules, evidence).
 // This is the open data layer: third parties can query what HubForge knows.
+// Returns the merged pack: built-in Social Impact Pack items + admin-defined
+// overrides (custom evidence / cases / frameworks / heuristics).
 import { NextResponse } from 'next/server'
-import { socialImpactPack } from '@/lib/engine-access'
+import { getMergedPack } from '@/lib/knowledge-overrides'
 
 export const maxDuration = 10
 
 export async function GET() {
+  const pack = await getMergedPack()
   return NextResponse.json({
-    pack: socialImpactPack.name,
-    version: socialImpactPack.version || '1.0.0',
+    pack: pack.name,
+    version: pack.version || '1.0.0',
     layers: {
-      frameworks: socialImpactPack.frameworks.map((f: any) => ({
+      frameworks: pack.frameworks.map((f: any) => ({
         name: f.name,
         description: f.description,
         whenToUse: f.whenToUse,
         keyElements: f.keyElements,
       })),
-      decisionRules: socialImpactPack.decisionRules.map((r: any) => ({
+      decisionRules: pack.decisionRules.map((r: any) => ({
         name: r.name,
         check: r.check,
         passCondition: r.passCondition,
         failAction: r.failAction,
       })),
-      evidence: socialImpactPack.evidence.map((e: any) => ({
+      evidence: pack.evidence.map((e: any) => ({
         title: e.title,
         type: e.type,
         summary: e.summary,
+        sourceUrl: e.sourceUrl,
       })),
-      historicalMemory: socialImpactPack.historicalMemory || [],
-      reasoningPatterns: (socialImpactPack.reasoningPatterns || []).map((p: any) => ({
+      historicalMemory: pack.historicalMemory || [],
+      reasoningPatterns: (pack.reasoningPatterns || []).map((p: any) => ({
         name: p.name,
         description: p.description,
       })),
-      improvementHeuristics: (socialImpactPack.improvementHeuristics || []).map((h: any) => ({
+      improvementHeuristics: (pack.improvementHeuristics || []).map((h: any) => ({
         name: h.name,
         description: h.description,
       })),

@@ -2,9 +2,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
   retrievalEngine, ruleEngine, reasoningEngine, critiqueEngine,
-  improvementEngine, evaluationEngine, socialImpactPack,
+  improvementEngine, evaluationEngine,
   normalizeConfig, type ProviderConfig, type OutputType,
 } from '@/lib/engine-access'
+import { getMergedPack } from '@/lib/knowledge-overrides'
 
 export const maxDuration = 60
 
@@ -51,39 +52,45 @@ export async function POST(req: NextRequest) {
 
     const config = normalizeConfig(providerConfig)
     const qualThreshold = threshold ?? 80
+    // Load the merged knowledge pack once per request: built-in Social
+    // Impact Pack + admin-defined overrides (custom evidence / cases /
+    // frameworks / heuristics / rubric weights). The retrieval and
+    // evaluation engines both read from this merged pack, so admin edits
+    // take effect on the next reasoning run with no code change.
+    const pack = await getMergedPack()
 
     switch (step) {
       case 'retrieval': {
-        const result = retrievalEngine(problem, decomposition, socialImpactPack)
+        const result = retrievalEngine(problem, decomposition, pack)
         return NextResponse.json({ output: {
           frameworks: result.frameworks.map((f: any) => ({ name: f.name, description: f.description, whenToUse: f.whenToUse, keyElements: f.keyElements, template: f.template })),
           decisionRules: result.decisionRules.map((r: any) => ({ name: r.name, check: r.check, passCondition: r.passCondition, failAction: r.failAction })),
-          evidence: result.evidence.map((e: any) => ({ title: e.title, type: e.type, summary: e.summary })),
+          evidence: result.evidence.map((e: any) => ({ title: e.title, type: e.type, summary: e.summary, sourceUrl: e.sourceUrl })),
           historicalMemory: result.historicalMemory,
           reasoningPatterns: result.reasoningPatterns.map((p: any) => ({ name: p.name, description: p.description })),
           improvementHeuristics: result.improvementHeuristics.map((h: any) => ({ name: h.name, description: h.description })),
         } })
       }
       case 'rule': {
-        return NextResponse.json({ output: ruleEngine(problem, socialImpactPack) })
+        return NextResponse.json({ output: ruleEngine(problem, pack) })
       }
       case 'reasoning': {
         const webSearch = body.webSearch // optional web search results
         const orgContext = body.orgContext // optional organization context string
         const contextBlocks = body.contextBlocks // optional context blocks string
-        const result = await reasoningEngine(config, problem, decomposition, retrieval, priorCritique, priorDraft, socialImpactPack, iteration, maxIterations, outputTypes, answers, webSearch, orgContext, contextBlocks)
+        const result = await reasoningEngine(config, problem, decomposition, retrieval, priorCritique, priorDraft, pack, iteration, maxIterations, outputTypes, answers, webSearch, orgContext, contextBlocks)
         return NextResponse.json({ output: result })
       }
       case 'critique': {
-        const result = await critiqueEngine(config, draft, socialImpactPack)
+        const result = await critiqueEngine(config, draft, pack)
         return NextResponse.json({ output: result })
       }
       case 'improvement': {
-        const result = await improvementEngine(config, draft, critique, socialImpactPack)
+        const result = await improvementEngine(config, draft, critique, pack)
         return NextResponse.json({ output: result })
       }
       case 'evaluation': {
-        const result = await evaluationEngine(config, improved, socialImpactPack, qualThreshold)
+        const result = await evaluationEngine(config, improved, pack, qualThreshold)
         return NextResponse.json({ output: result })
       }
       default:

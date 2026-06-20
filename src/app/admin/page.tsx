@@ -1,6 +1,10 @@
 "use client"
 import { useState, useEffect } from "react"
-import { BrainCircuit, Users, FileText, Download, Loader2, ShieldCheck, BarChart3, AlertTriangle, Activity, TrendingUp } from "lucide-react"
+import { BrainCircuit, Users, FileText, Download, Loader2, ShieldCheck, BarChart3, AlertTriangle, Activity, TrendingUp, Gauge, Network, MessageSquare, FlaskConical } from "lucide-react"
+import { QualityConsole } from '@/components/admin/quality-console'
+import { KnowledgeEditor } from '@/components/admin/knowledge-editor'
+import { FeedbackAnalysis } from '@/components/admin/feedback-analysis'
+import { PromptManager } from '@/components/admin/prompt-manager'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,9 +25,17 @@ export default function AdminPage() {
   const [analyticsData, setAnalyticsData] = useState<any>(null)
   const [error, setError] = useState("")
   const [tab, setTab] = useState("analytics")
+  const [qualityRefreshKey, setQualityRefreshKey] = useState(0)
+  const [knowledgeRefreshKey, setKnowledgeRefreshKey] = useState(0)
+  const [feedbackRefreshKey, setFeedbackRefreshKey] = useState(0)
+  const [promptsRefreshKey, setPromptsRefreshKey] = useState(0)
 
   const fetchAll = async (key: string) => {
     setLoading(true); setError("")
+    setQualityRefreshKey(k => k + 1)
+    setKnowledgeRefreshKey(k => k + 1)
+    setFeedbackRefreshKey(k => k + 1)
+    setPromptsRefreshKey(k => k + 1)
     try {
       const [u, a] = await Promise.all([
         fetch(`/api/profile?admin_key=${encodeURIComponent(key)}`).then(r => r.json()),
@@ -76,6 +88,9 @@ export default function AdminPage() {
           <div className="flex items-center gap-2.5"><div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center"><BrainCircuit className="h-4 w-4 text-white" /></div><div><div className="font-bold text-sm">HubForge OS - Admin</div><div className="text-[10px] font-mono text-muted-foreground">analytics & users</div></div></div>
           <div className="ml-auto flex gap-2"><Button variant="outline" size="sm" className="text-xs" onClick={() => fetchAll(adminKey)}>{loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Refresh"}</Button><Button variant="ghost" size="sm" className="text-xs" onClick={handleLogout}>Logout</Button></div>
         </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4">
+          <div className="text-[10px] font-mono text-muted-foreground">signed in as <span className="text-amber-700 dark:text-amber-400">admin</span> · admin key: <span className="font-mono">{adminKey.slice(0, 4)}••••</span></div>
+        </div>
       </header>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
@@ -84,7 +99,7 @@ export default function AdminPage() {
           ))}
         </div>
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList><TabsTrigger value="analytics" className="text-xs gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Analytics</TabsTrigger><TabsTrigger value="users" className="text-xs gap-1.5"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger></TabsList>
+          <TabsList><TabsTrigger value="analytics" className="text-xs gap-1.5"><BarChart3 className="h-3.5 w-3.5" /> Analytics</TabsTrigger><TabsTrigger value="quality" className="text-xs gap-1.5"><Gauge className="h-3.5 w-3.5" /> Quality</TabsTrigger><TabsTrigger value="feedback" className="text-xs gap-1.5"><MessageSquare className="h-3.5 w-3.5" /> Feedback</TabsTrigger><TabsTrigger value="prompts" className="text-xs gap-1.5"><FlaskConical className="h-3.5 w-3.5" /> Prompts</TabsTrigger><TabsTrigger value="knowledge" className="text-xs gap-1.5"><Network className="h-3.5 w-3.5" /> Knowledge</TabsTrigger><TabsTrigger value="users" className="text-xs gap-1.5"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger></TabsList>
           <TabsContent value="analytics" className="space-y-6 mt-4">
             {a && (<>
               <Card><CardHeader className="pb-2"><CardTitle className="text-sm font-mono flex items-center gap-2"><Activity className="h-4 w-4 text-amber-600" /> Daily active users (30 days)</CardTitle></CardHeader><CardContent><div className="flex items-end gap-1 h-32">{a.dailyActive?.map((d:any,i:number) => (<div key={i} className="flex-1 bg-amber-500 rounded-t-sm" style={{height:`${(d.users/maxDaily)*100}%`,minHeight:d.users>0?"2px":"0"}} title={`${d.date}: ${d.users} users`} />))}</div></CardContent></Card>
@@ -99,6 +114,18 @@ export default function AdminPage() {
               </div>
               {a.recentErrors?.length > 0 && (<Card><CardHeader className="pb-2"><CardTitle className="text-sm font-mono flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-red-500" /> Recent errors</CardTitle></CardHeader><CardContent><ScrollArea className="h-48"><div className="space-y-1.5">{a.recentErrors.map((err:any,i:number) => <div key={i} className="flex items-start gap-2 text-xs py-1 border-b border-border last:border-0"><Badge variant="outline" className="text-[9px] font-mono shrink-0 text-red-600 border-red-300">{err.type}</Badge><span className="flex-1 text-muted-foreground truncate">{err.message}</span><span className="text-[9px] text-muted-foreground font-mono shrink-0">{new Date(err.time).toLocaleString()}</span></div>)}</div></ScrollArea></CardContent></Card>)}
             </>)}
+          </TabsContent>
+          <TabsContent value="quality" className="mt-4">
+            <QualityConsole adminKey={adminKey} refreshKey={qualityRefreshKey} />
+          </TabsContent>
+          <TabsContent value="feedback" className="mt-4">
+            <FeedbackAnalysis adminKey={adminKey} refreshKey={feedbackRefreshKey} />
+          </TabsContent>
+          <TabsContent value="prompts" className="mt-4">
+            <PromptManager adminKey={adminKey} refreshKey={promptsRefreshKey} />
+          </TabsContent>
+          <TabsContent value="knowledge" className="mt-4">
+            <KnowledgeEditor adminKey={adminKey} refreshKey={knowledgeRefreshKey} />
           </TabsContent>
           <TabsContent value="users" className="space-y-4 mt-4">
             <div className="flex justify-between"><Input placeholder="Search..." className="w-64 text-xs h-8" onChange={e => {/* TODO: filter */}} /><Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={exportCSV}><Download className="h-3.5 w-3.5" /> Export CSV</Button></div>

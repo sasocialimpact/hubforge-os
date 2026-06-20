@@ -5,7 +5,7 @@ import {
   supervisorEngine, retrievalEngine, ruleEngine, reasoningEngine,
   critiqueEngine, improvementEngine, evaluationEngine, structureEngine,
   feedbackEngine, describeProvider, normalizeConfig,
-  type ProviderConfig, type OutputType,
+  type ProviderConfig, type OutputType, type ReasoningPromptOverride,
 } from './engines'
 import { socialImpactPack } from './knowledge'
 
@@ -15,4 +15,4 @@ export {
   feedbackEngine, describeProvider, normalizeConfig,
   socialImpactPack,
 }
-export type { ProviderConfig, OutputType }
+export type { ProviderConfig, OutputType, ReasoningPromptOverride }

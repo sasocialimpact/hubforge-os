@@ -480,6 +480,21 @@ export function ruleEngine(problem: string, pack: DomainPack): RuleCheckResult[]
 // ============================================================
 // Engine 4 - Reasoning Engine
 // ============================================================
+export interface ReasoningPromptOverride {
+  // If provided, used INSTEAD of the built-in system prompt for the Reasoning
+  // Engine. Empty/null falls back to the built-in prompt. Used by the Prompt
+  // Manager's A/B Test endpoint to compare prompt versions side-by-side.
+  systemPrompt?: string
+  // If provided, treated as a template with placeholders that get substituted
+  // with the actual decomposition / retrieval / problem / output sections /
+  // iteration context. Recognized placeholders (case-sensitive, square
+  // brackets): [USER PROBLEM], [OUTPUT SECTIONS], [DECOMPOSITION],
+  // [RETRIEVED KNOWLEDGE], [ITERATION], [MAX_ITERATIONS], [PRIOR ITERATION].
+  // Placeholders that don't appear in the template are simply not substituted
+  // (the admin controls what data the LLM sees).
+  userPromptTemplate?: string
+}
+
 export async function reasoningEngine(
   config: ProviderConfig,
   problem: string,
@@ -495,6 +510,7 @@ export async function reasoningEngine(
   webSearch?: { demographic: any[]; previousPrograms: any[]; evidence: any[]; summary: string } | null,
   orgContext?: string | null,
   contextBlocks?: string | null,
+  promptOverride?: ReasoningPromptOverride | null,
 ): Promise<string> {
   const frameworksText = (retrieval.frameworks || [])
     .map((f: any) => `### ${f.name}\n${f.description || ''}\nWhen to use: ${f.whenToUse || ''}\nKey elements: ${(f.keyElements || []).join(', ')}${f.template ? `\nTemplate: ${f.template}` : ''}`)
@@ -622,7 +638,62 @@ ${priorCritique}
 # TASK
 Produce the best expert-grade draft response you can. Be specific, evidence-grounded, and structured. Cite evidence by [E#] / [H#] ID. Include all required sections with verbatim headings. Always include "## Risks & Assumptions".`
 
-  return await llm(config, system, user)
+  // ── Prompt override (Prompt Manager A/B Testing) ──
+  // If the caller supplied custom prompts, swap them in. The user-prompt
+  // template uses square-bracket placeholders that we substitute with the
+  // same context blocks the built-in prompt uses. Unrecognized placeholders
+  // are left alone so the admin can write free-form templates too.
+  let finalSystem = system
+  let finalUser = user
+  if (promptOverride) {
+    if (promptOverride.systemPrompt && promptOverride.systemPrompt.trim()) {
+      finalSystem = promptOverride.systemPrompt
+    }
+    if (promptOverride.userPromptTemplate && promptOverride.userPromptTemplate.trim()) {
+      const decompositionBlock = `# DECOMPOSITION (from Supervisor Engine)
+- Problem statement: ${decomposition.problemStatement || ''}
+- Objectives: ${(decomposition.objectives || []).join('; ')}
+- Scope: ${decomposition.scope || ''}
+- Stakeholders: ${(decomposition.stakeholders || []).map((s: any) => `${s.role} (${s.description || ''})`).join('; ')}
+- Key considerations: ${(decomposition.keyConsiderations || []).join('; ')}`
+      const retrievedKnowledgeBlock = `# RETRIEVED KNOWLEDGE
+
+## Frameworks
+${frameworksText}
+
+## Decision Rules (must satisfy)
+${rulesText}
+
+## Evidence Library (cite by [E#] ID)
+${evidenceText}
+
+## Historical Memory (cite by [H#] ID)
+${memoryText}
+
+## Reasoning Patterns
+${patternsText}`
+      const priorIterationBlock = (priorDraft && priorCritique)
+        ? `# PRIOR ITERATION (iteration ${iteration - 1})
+You produced a draft that was critiqued. You MUST address every critique point. For high-severity issues, quote the original text and the corrected text.
+
+## Prior Draft
+${priorDraft}
+
+## Critique to Address
+${priorCritique}`
+        : ''
+      finalUser = promptOverride.userPromptTemplate
+        .replaceAll('[USER PROBLEM]', `${problem}${answersBlock}`)
+        .replaceAll('[OUTPUT SECTIONS]', outputGuidance)
+        .replaceAll('[DECOMPOSITION]', decompositionBlock)
+        .replaceAll('[RETRIEVED KNOWLEDGE]', retrievedKnowledgeBlock)
+        .replaceAll('[ITERATION]', String(iteration))
+        .replaceAll('[MAX_ITERATIONS]', String(maxIterations))
+        .replaceAll('[PRIOR ITERATION]', priorIterationBlock)
+    }
+  }
+
+  return await llm(config, finalSystem, finalUser)
 }
 
 // ============================================================

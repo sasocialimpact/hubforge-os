@@ -111,12 +111,17 @@ export function GeneralMode({ connected, providerConfig, programId }: { connecte
   const [feedbackText, setFeedbackText] = useState('')
   const [feedbackWorking, setFeedbackWorking] = useState(false)
   const [feedbackHistory, setFeedbackHistory] = useState<{ feedback: string; addressed: string[] }[]>([])
+  // Session ID of the most recent strategy run. Passed to /api/feedback so
+  // the feedback entry is appended to the session record's feedback_history
+  // (and surfaces in the admin Feedback Analysis tab with scoreBefore/After).
+  const [currentSessionId, setCurrentSessionId] = useState<string>('')
 
   const [memory, setMemory] = useState<any[]>([])
 
   const runLoop = useCallback(async (problemText: string, answerMap: Record<string, string>, outs: OutputType[], config: ProviderConfig) => {
     const loopSessionId = `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     setAnalyticsSession(loopSessionId)
+    setCurrentSessionId(loopSessionId)
     const loopStart = Date.now()
     analytics.runStart({ problemLength: problemText.length, outputTypes: outs, provider: config.provider, skippedInterview: Object.keys(answerMap).length === 0 })
 
@@ -152,6 +157,9 @@ export function GeneralMode({ connected, providerConfig, programId }: { connecte
       let finalScore = 0
       let thresholdMet = false
       let iterations = 0
+      // Track the last critique so the Quality Console can show what issues
+      // were found on the final draft (hoisted outside the loop scope).
+      let lastCritique: any = null
 
       for (let iter = 1; iter <= MAX_ITERATIONS; iter++) {
         iterations = iter
@@ -172,6 +180,7 @@ export function GeneralMode({ connected, providerConfig, programId }: { connecte
         setProgressPhase('critique')
         const critique = await callCritique(draft, config)
         priorCritiqueText = critique.issues.map((i: any) => `[${i.severity}] (${i.heuristic}) ${i.description}`).join('\n')
+        lastCritique = critique
 
         setProgressMsg('Refining the draft…')
         setProgressPhase('improvement')
@@ -230,9 +239,14 @@ export function GeneralMode({ connected, providerConfig, programId }: { connecte
       }
 
       saveMemory({
-        id: `s-${Date.now()}`, timestamp: new Date().toISOString(),
+        id: loopSessionId, timestamp: new Date().toISOString(),
         problem: problemText, iterations, finalScore, thresholdMet,
         finalDraft, structuredOutputs: structured, provider: providerDisplayLabel(config),
+        // Quality Console enrichment
+        critique: lastCritique,
+        evaluationBreakdown: evaluation,
+        feedbackHistory,
+        outputTypes: outs,
       }).catch(() => {})
       getMemory().then(setMemory).catch(() => {})
     } catch (e: any) {
@@ -248,7 +262,7 @@ export function GeneralMode({ connected, providerConfig, programId }: { connecte
         setProgressMsg('Starting...')
       }, 5000)
     }
-  }, [decomposition, progressPhase])
+  }, [decomposition, progressPhase, feedbackHistory])
 
   const startInterview = useCallback(async () => {
     if (!problem.trim()) return
@@ -291,7 +305,14 @@ export function GeneralMode({ connected, providerConfig, programId }: { connecte
     setFeedbackWorking(true)
     analytics.feedbackGiven({ feedbackLength: feedbackText.trim().length })
     try {
-      const result = await callFeedback(deliverable.draft, feedbackText.trim(), deliverable.outputTypes, providerConfig)
+      // Capture the score BEFORE the feedback round so /api/feedback can
+      // store scoreBefore/scoreAfter on the session's feedback_history entry
+      // (used by the admin Feedback Analysis tab).
+      const scoreBefore = deliverable.evaluation?.overall ?? null
+      const result = await callFeedback(
+        deliverable.draft, feedbackText.trim(), deliverable.outputTypes, providerConfig,
+        { sessionId: currentSessionId || undefined, scoreBefore: scoreBefore ?? undefined }
+      )
       setDeliverable({ draft: result.improved, evaluation: result.evaluation, structured: result.structured, outputTypes: deliverable.outputTypes })
       setFeedbackHistory((h) => [...h, { feedback: feedbackText, addressed: result.addressed || [] }])
       analytics.feedbackComplete({ newScore: result.evaluation?.overall ?? 0, addressedCount: result.addressed?.length ?? 0 })

@@ -66,9 +66,19 @@ export async function callStructure(finalDraft: string, outputTypes: OutputType[
     apiCall('/api/structure', { finalDraft, outputTypes, providerConfig })
   )
 }
-export async function callFeedback(currentDraft: string, feedback: string, outputTypes: OutputType[], providerConfig: ProviderConfig): Promise<{ improved: string; addressed: string[]; evaluation: EvaluationResult; structured: StructuredOutputs }> {
+export async function callFeedback(
+  currentDraft: string,
+  feedback: string,
+  outputTypes: OutputType[],
+  providerConfig: ProviderConfig,
+  opts?: { sessionId?: string; scoreBefore?: number }
+): Promise<{ improved: string; addressed: string[]; evaluation: EvaluationResult; structured: StructuredOutputs; savedToSession?: boolean }> {
   // Feedback is NOT cached - user feedback is unique each time.
-  return apiCall('/api/feedback', { currentDraft, feedback, outputTypes, providerConfig })
+  return apiCall('/api/feedback', {
+    currentDraft, feedback, outputTypes, providerConfig,
+    sessionId: opts?.sessionId,
+    scoreBefore: opts?.scoreBefore,
+  })
 }
 export async function callWebSearch(problem: string, decomposition: any, providerConfig: ProviderConfig): Promise<{ demographic: any[]; previousPrograms: any[]; evidence: any[]; summary: string }> {
   // Web search results (demographics, previous programs) change slowly - cache 7 days.
